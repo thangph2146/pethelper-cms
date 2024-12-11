@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 // Định nghĩa interface cho User document
 interface IUser extends Document {
   name: string;
+  image: string; 
   email: string;
   password: string;
   role: 'user' | 'admin';

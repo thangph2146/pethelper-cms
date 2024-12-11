@@ -3,6 +3,7 @@ import type { IUser } from './User';
 import type { IComment } from './Comment';
 
 export interface IPost extends Document {
+  _id: string;
   title: string;
   content: string;
   author: Types.ObjectId | IUser;
@@ -20,7 +21,7 @@ export interface IPost extends Document {
 export interface IAuthor extends IUser {
   name: string;
   email: string;
-  image?: string;
+  image: string; // Removed optional to match IUser interface
 }
 
 const PostSchema = new Schema<IPost>(

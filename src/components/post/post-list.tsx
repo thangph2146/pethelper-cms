@@ -18,7 +18,13 @@ interface PostListProps {
 
 export function PostList({ filters }: PostListProps) {
   const { ref, inView } = useInView();
-  const { data, status, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfinitePosts({ filters });
+  const { 
+    data, 
+    status, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage 
+  } = useInfinitePosts({ filters });
 
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
@@ -72,7 +78,7 @@ export function PostList({ filters }: PostListProps) {
         <div key={i} className="space-y-6">
           {page.posts.map((post: IPost) => (
             <PostCard 
-              key={post._id} 
+              key={post._id}
               post={post}
               onLike={() => handleLike(post._id)}
               onUnlike={() => handleUnlike(post._id)}
@@ -81,11 +87,13 @@ export function PostList({ filters }: PostListProps) {
         </div>
       ))}
 
-      {isFetchingNextPage && (
-        <div className="flex justify-center p-4">
-          <Spinner />
-        </div>
-      )}
+      <div ref={ref}>
+        {isFetchingNextPage && (
+          <div className="flex justify-center p-4">
+            <Spinner />
+          </div>
+        )}
+      </div>
       
       {!hasNextPage && data.pages[0].posts.length > 0 && (
         <p className="text-center text-gray-500">

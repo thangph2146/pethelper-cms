@@ -9,9 +9,23 @@ const handler = async (req: Request) => {
       throw new Error('MONGODB_URI chưa được cấu hình');
     }
 
-    console.log('Đang kết nối với MongoDB...');
-    await connectToMongoDB();
-    console.log('Đã kết nối với MongoDB thành công');
+    try {
+      await Promise.race([
+        connectToMongoDB(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Kết nối MongoDB quá thời gian')), 30000)
+        )
+      ]);
+    } catch (error: any) {
+      console.error('Lỗi kết nối MongoDB:', error);
+      return NextResponse.json(
+        { 
+          error: 'Không thể kết nối đến cơ sở dữ liệu',
+          details: error.message 
+        },
+        { status: 503 }
+      );
+    }
     
     const { email, password } = await req.json();
     
@@ -22,8 +36,10 @@ const handler = async (req: Request) => {
       );
     }
 
-    // Kiểm tra user tồn tại và lấy cả password
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email })
+      .select('+password')
+      .maxTimeMS(5000);
+
     if (!user) {
       return NextResponse.json(
         { error: 'Email hoặc mật khẩu không chính xác' },

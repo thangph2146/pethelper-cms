@@ -1,4 +1,4 @@
-import { connectDB } from '@/lib/mongodb';
+import { connectToMongoDB } from '@/lib/mongodb';
 import { Post } from '@backend/models/Post';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
@@ -26,7 +26,7 @@ export async function GET(req: Request) {
       ];
     }
 
-    await connectDB();
+    await connectToMongoDB();
     
     const [posts, total] = await Promise.all([
       Post.find(query)
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
       );
     }
 
-    await connectDB();
+    await connectToMongoDB();
     const post = await Post.create({
       title,
       content,

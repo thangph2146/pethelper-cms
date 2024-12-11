@@ -1,4 +1,7 @@
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 declare global {
   var mongoose: {
@@ -29,8 +32,9 @@ export const connectToMongoDB = async (): Promise<mongoose.Connection | null> =>
     const opts = {
       bufferCommands: true,
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 30000,
+      connectTimeoutMS: 30000,
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {

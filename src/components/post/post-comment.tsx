@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
 import { PostService } from '@/services/post.service';
 import { toast } from 'react-hot-toast';
-import type { IComment, ICommentPopulated } from '@backend/models/Comment';
+import type { ICommentPopulated } from '@backend/models/Comment';
 
 interface PostCommentProps {
   postId: string;
@@ -58,7 +58,7 @@ export function PostComment({ postId, comments, onCommentAdded }: PostCommentPro
 
       <div className="space-y-4">
         {comments?.map((comment) => (
-          <div key={comment._id} className="flex gap-3">
+          <div key={String(comment._id)} className="flex gap-3">
             <Avatar>
               <AvatarImage 
                 src={comment.author.image} 
