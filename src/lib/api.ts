@@ -6,6 +6,16 @@ export interface RegisterResponse {
   message: string;
 }
 
+interface VerifyResponse {
+  valid: boolean;
+  user?: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+  }
+}
+
 export const authAPI = {
   login: async (email: string, password: string) => {
     const { data } = await axiosInstance.post<LoginResponse>('/auth/login', {
@@ -32,5 +42,20 @@ export const authAPI = {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     }
+  },
+
+  verifyToken: async (): Promise<VerifyResponse> => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('No token found');
+    }
+
+    const { data } = await axiosInstance.get<VerifyResponse>('/auth/verify', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return data;
   }
 };

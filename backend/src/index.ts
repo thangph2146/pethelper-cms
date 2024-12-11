@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 import config from './config';
 import logger from './utils/logger';
 
-const MAX_RETRIES = 0;
+const MAX_RETRIES = 5;
 const RETRY_INTERVAL = 5000; // 5 seconds
 
 const connectDB = async (retryCount = 0) => {
@@ -14,6 +14,12 @@ const connectDB = async (retryCount = 0) => {
     await mongoose.connect(config.mongoUri, {
       serverSelectionTimeoutMS: 5000,
       retryWrites: true,
+      ssl: true,
+      tls: true,
+      tlsAllowInvalidCertificates: process.env.NODE_ENV === 'development',
+      tlsAllowInvalidHostnames: process.env.NODE_ENV === 'development',
+      minPoolSize: 1,
+      maxPoolSize: 10,
     });
     logger.info('Đã kết nối với MongoDB thành công');
   } catch (error: any) {
