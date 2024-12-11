@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 import config from './config';
 import logger from './utils/logger';
 
-const MAX_RETRIES = ;
+const MAX_RETRIES = 0;
 const RETRY_INTERVAL = 5000; // 5 seconds
 
 const connectDB = async (retryCount = 0) => {
