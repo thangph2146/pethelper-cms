@@ -45,3 +45,24 @@ logs/
 *.log
 
 .node
+
+# Large files & folders
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.mp4
+*.mov
+*.avi
+*.wmv
+*.iso
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Cache
+.cache/
