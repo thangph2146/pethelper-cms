@@ -3,13 +3,24 @@ import { connectToMongoDB } from '@/lib/mongodb';
 import { User, IUser } from '@backend/models/User';
 import jwt from 'jsonwebtoken';
 
-export async function POST(req: Request) {
+const handler = async (req: Request) => {
   try {
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI chưa được cấu hình');
+    }
+
     console.log('Đang kết nối với MongoDB...');
     await connectToMongoDB();
-    console.log('Đã kết nối với MongoDB');
+    console.log('Đã kết nối với MongoDB thành công');
     
     const { email, password } = await req.json();
+    
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: 'Email và mật khẩu là bắt buộc' },
+        { status: 400 }
+      );
+    }
 
     // Kiểm tra user tồn tại và lấy cả password
     const user = await User.findOne({ email }).select('+password');
@@ -92,11 +103,16 @@ export async function POST(req: Request) {
       }
     });
 
-  } catch (error) {
-    console.error('Login error:', error);
+  } catch (error: any) {
+    console.error('Chi tiết lỗi đăng nhập:', error);
     return NextResponse.json(
-      { error: 'Đã có lỗi xảy ra khi đăng nhập!' },
+      { 
+        error: 'Đã có lỗi xảy ra khi đăng nhập!',
+        details: error.message 
+      },
       { status: 500 }
     );
   }
-} 
+};
+
+export { handler as POST }; 

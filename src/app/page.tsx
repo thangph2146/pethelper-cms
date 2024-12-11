@@ -1,10 +1,17 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
+import { connectToMongoDB } from '@/lib/mongodb';
+
+// Đảm bảo kết nối MongoDB trước khi render
 
 export default function HomePage() {
-
+  
+  useEffect(() => {
+    connectToMongoDB();
+  }, []);
+  
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="text-center">
