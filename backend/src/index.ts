@@ -6,18 +6,33 @@ import mongoose from 'mongoose';
 import config from './config';
 import logger from './utils/logger';
 
-const connectDB = async () => {
+const MAX_RETRIES = ;
+const RETRY_INTERVAL = 5000; // 5 seconds
+
+const connectDB = async (retryCount = 0) => {
   try {
     await mongoose.connect(config.mongoUri, {
       serverSelectionTimeoutMS: 5000,
       retryWrites: true,
     });
-    logger.info('Đã kết nối với MongoDB');
+    logger.info('Đã kết nối với MongoDB thành công');
   } catch (error: any) {
-    logger.error(`Lỗi kết nối MongoDB: ${error.message}`);
+    logger.error(`Lỗi kết nối MongoDB (lần thử ${retryCount + 1}/${MAX_RETRIES}): ${error.message}`);
+    
     if (error.name === 'MongooseServerSelectionError') {
-      logger.error('Could not connect to any servers in your MongoDB Atlas cluster. One common reason is that you\'re trying to access the database from an IP that isn\'t whitelisted. Make sure your current IP address is on your Atlas cluster\'s IP whitelist: https://www.mongodb.com/docs/atlas/security-whitelist/');
+      logger.error('Không thể kết nối tới MongoDB Atlas cluster. Vui lòng kiểm tra:');
+      logger.error('1. IP của bạn đã được whitelist trong MongoDB Atlas');
+      logger.error('2. Chuỗi kết nối MongoDB URI có chính xác');
+      logger.error('3. Tài khoản MongoDB Atlas có quyền truy cập');
     }
+
+    if (retryCount < MAX_RETRIES) {
+      logger.info(`Đang thử kết nối lại sau ${RETRY_INTERVAL/1000} giây...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_INTERVAL));
+      return connectDB(retryCount + 1);
+    }
+
+    logger.error(`Đã thử kết nối ${MAX_RETRIES} lần không thành công. Thoát ứng dụng.`);
     process.exit(1);
   }
 };
@@ -96,17 +111,25 @@ const startServer = async () => {
   }
 };
 
-// Error handlers cho mongoose
+// Cập nhật error handlers cho mongoose
 mongoose.connection.on('error', err => {
-  logger.error('MongoDB connection error:', err);
+  logger.error('Lỗi kết nối MongoDB:', err);
+  // Thử kết nối lại nếu mất kết nối
+  setTimeout(() => {
+    logger.info('Đang thử kết nối lại với MongoDB...');
+    connectDB();
+  }, RETRY_INTERVAL);
 });
 
 mongoose.connection.on('disconnected', () => {
-  logger.warn('MongoDB disconnected');
+  logger.warn('Mất kết nối MongoDB - Đang thử kết nối lại...');
+  setTimeout(() => {
+    connectDB();
+  }, RETRY_INTERVAL);
 });
 
 mongoose.connection.on('connected', () => {
-  logger.info('MongoDB connected');
+  logger.info('Đã kết nối lại thành công với MongoDB');
 });
 
 startServer(); 
