@@ -38,8 +38,7 @@ export default function RegisterPage() {
       }
     } catch (error: any) {
       setError(
-        error.response?.data?.message || 
-        'Có lỗi xảy ra khi đăng ký'
+        error.response?.data?.message 
       );
     } finally {
       setLoading(false);

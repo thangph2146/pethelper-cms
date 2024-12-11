@@ -13,7 +13,7 @@ export default function LoginPage() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   useEffect(() => {
     // Kiểm tra token hợp lệ trước khi chuyển hướng
     const checkAuth = async () => {
@@ -78,7 +78,7 @@ export default function LoginPage() {
       if (err.response?.status === 429) {
         setError('Quá nhiều lần đăng nhập thất bại. Vui lòng thử lại sau.');
       } else {
-        setError(err.response?.data?.error || 'Đã có lỗi xảy ra');
+        setError(err.response?.data?.error );
       }
     } finally {
       setLoading(false);

@@ -1,13 +1,21 @@
-import  connectDB from '@/lib/mongodb';
-import { User } from '@backend/models/User';
-import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
+import { connectToMongoDB } from '@/lib/mongodb';
+import { User } from '@/backend/models/User';
 
 export async function POST(req: Request) {
   try {
-    const { email, password, name } = await req.json();
-    
-    await connectDB();
+    const { name, email, password, phone } = await req.json();
+
+    // Kiểm tra dữ liệu đầu vào
+    if (!name || !email || !password) {
+      return NextResponse.json(
+        { message: 'Vui lòng điền đầy đủ thông tin' },
+        { status: 400 }
+      );
+    }
+
+    // Kết nối database
+    await connectToMongoDB();
 
     // Kiểm tra email đã tồn tại
     const existingUser = await User.findOne({ email });
@@ -18,23 +26,25 @@ export async function POST(req: Request) {
       );
     }
 
-    // Mã hóa mật khẩu
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Tạo user mới
-    const user = await User.create({
-      email,
-      password: hashedPassword,
+    // Tạo user mới - password sẽ được hash tự động bởi middleware
+    await User.create({
       name,
+      email,
+      password,
+      phone,
+      status: 'active',
+      role: 'user'
     });
 
-    return NextResponse.json(
-      { message: 'Đăng ký thành công', user: { id: user._id, email, name } },
-      { status: 201 }
-    );
+    return NextResponse.json({
+      success: true,
+      message: 'Đăng ký thành công',
+    });
+
   } catch (error) {
+    console.error('Register error:', error);
     return NextResponse.json(
-      { message: 'Đã có lỗi xảy ra' },
+      { message: 'Có lỗi xảy ra khi đăng ký' },
       { status: 500 }
     );
   }

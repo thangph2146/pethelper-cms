@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
-import { User } from '@backend/models/User';
-import connectDB from '@/lib/mongodb';
+import { User, IUser } from '@backend/models/User';
+import { connectToMongoDB } from '@/lib/mongodb';
 
 export async function GET(req: Request) {
   try {
@@ -25,9 +25,13 @@ export async function GET(req: Request) {
       );
     }
     
-    await connectDB();
+    await connectToMongoDB();
     
-    const user = await User.findById(decoded.userId).select('-password');
+    const user = await User.findOne({
+      _id: decoded.userId,
+      status: 'active'
+    }).select('-password');
+
     if (!user) {
       return NextResponse.json(
         { error: 'Tài khoản không tồn tại hoặc đã bị khóa' },
@@ -35,13 +39,30 @@ export async function GET(req: Request) {
       );
     }
 
+    if (user.lastActive) {
+      const inactiveTime = Date.now() - user.lastActive.getTime();
+      const maxInactiveTime = 30 * 24 * 60 * 60 * 1000; // 30 ngày
+      
+      if (inactiveTime > maxInactiveTime) {
+        return NextResponse.json(
+          { error: 'Tài khoản không hoạt động quá lâu, vui lòng đăng nhập lại' },
+          { status: 401 }
+        );
+      }
+    }
+
+    await User.findByIdAndUpdate(user._id, {
+      lastActive: new Date()
+    });
+
     return NextResponse.json({ 
       valid: true,
       user: {
         id: user._id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        status: user.status
       }
     });
 
