@@ -5,10 +5,10 @@ import { usePosts } from '@/hooks/use-posts';
 import { PostCard } from './PostCard';
 import { LoadingSpinner } from './LoadingSpinner';
 import { ErrorMessage } from './ErrorMessage';
-import type { PostFilters } from '@/types/api';
+import type { GetPostsParams } from '@/types/api';
 
 interface Props {
-  filters?: Omit<PostFilters, 'page' | 'limit'>;
+  filters?: Omit<GetPostsParams, 'page' | 'limit'>;
   limit?: number;
   showPagination?: boolean;
 }

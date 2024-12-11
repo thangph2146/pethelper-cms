@@ -1,6 +1,6 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import  connectDB  from './mongodb';
+import { connectToMongoDB } from './mongodb';
 import { User } from '@backend/models/User';
 import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
@@ -20,7 +20,7 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Email và mật khẩu là bắt buộc');
         }
 
-        await connectDB();
+        await connectToMongoDB();
         const user = await User.findOne({ email: credentials.email });
 
         if (!user) {
@@ -34,7 +34,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         return {
-          id: user._id.toString(),
+          id: user?._id.toString(),
           email: user.email,
           name: user.name,
           role: user.role,

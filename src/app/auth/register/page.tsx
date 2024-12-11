@@ -3,9 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import axiosInstance from '@/lib/axios';
-import bcrypt  from 'bcryptjs';
-import { authAPI } from '@/lib/api';
+import { authAPI } from '@/lib/authAPI';
 
 export default function RegisterPage() {
   const router = useRouter();
