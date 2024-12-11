@@ -1,77 +1,56 @@
 'use client';
 
-import { usePosts } from '@/hooks/use-posts';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { ErrorMessage } from '@/components/ErrorMessage';
+import React from 'react';
+import Link from 'next/link';
 
 export default function HomePage() {
-  const { posts, loading, error, filters, setFilters } = usePosts();
-
-  if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage message={error} />;
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">Danh sách động vật cần cứu trợ</h1>
-      
-      {/* Bộ lọc */}
-      <div className="mb-6 flex gap-4">
-        <select
-          value={filters.animalType || ''}
-          onChange={(e) => setFilters({ ...filters, animalType: e.target.value })}
-          className="border rounded px-3 py-2"
-        >
-          <option value="">Tất cả loại</option>
-          <option value="DOG">Chó</option>
-          <option value="CAT">Mèo</option>
-          <option value="OTHER">Khác</option>
-        </select>
-
-        <select
-          value={filters.urgency || ''}
-          onChange={(e) => setFilters({ ...filters, urgency: e.target.value })}
-          className="border rounded px-3 py-2"
-        >
-          <option value="">Tất cả mức độ</option>
-          <option value="HIGH">Khẩn cấp</option>
-          <option value="MEDIUM">Trung bình</option>
-          <option value="LOW">Thấp</option>
-        </select>
+    <div className="container mx-auto px-4 py-16">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          Chào mừng đến với PetHelper
+        </h1>
+        <p className="text-xl text-gray-600 mb-8">
+          Nền tảng kết nối và hỗ trợ cứu trợ động vật
+        </p>
+        <div className="space-x-4">
+          <Link
+            href="/posts"
+            className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-md hover:bg-indigo-700"
+          >
+            Xem danh sách
+          </Link>
+          <Link
+            href="/posts/create"
+            className="inline-block bg-white text-indigo-600 px-6 py-3 rounded-md border-2 border-indigo-600 hover:bg-indigo-50"
+          >
+            Tạo bài đăng
+          </Link>
+        </div>
       </div>
 
-      {/* Danh sách bài đăng */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {posts.map((post) => (
-          <div key={post._id} className="border rounded-lg p-4 shadow-md">
-            {post.images[0] && (
-              <img
-                src={post.images[0]}
-                alt={post.title}
-                className="w-full h-48 object-cover mb-4 rounded"
-              />
-            )}
-            <h2 className="text-xl font-semibold mb-2">{post.title}</h2>
-            <p className="text-gray-600 mb-2">{post.description}</p>
-            <div className="flex justify-between items-center">
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                {post.animalType}
-              </span>
-              <span className={`px-2 py-1 rounded ${
-                post.urgency === 'HIGH' 
-                  ? 'bg-red-100 text-red-800'
-                  : post.urgency === 'MEDIUM'
-                  ? 'bg-yellow-100 text-yellow-800'
-                  : 'bg-green-100 text-green-800'
-              }`}>
-                {post.urgency}
-              </span>
-            </div>
-            <div className="mt-2 text-gray-500 text-sm">
-              {post.location}
-            </div>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
+        <div className="text-center p-6">
+          <h3 className="text-xl font-semibold mb-4">Dễ dàng chia sẻ</h3>
+          <p className="text-gray-600">
+            Đăng thông tin về các trường hợp động vật cần được giúp đỡ
+          </p>
+        </div>
+        <div className="text-center p-6">
+          <h3 className="text-xl font-semibold mb-4">Kết nối nhanh chóng</h3>
+          <p className="text-gray-600">
+            Tìm kiếm và liên hệ với những người có thể giúp đỡ
+          </p>
+        </div>
+        <div className="text-center p-6">
+          <h3 className="text-xl font-semibold mb-4">Cộng đồng rộng lớn</h3>
+          <p className="text-gray-600">
+            Tham gia cộng đồng những người yêu thương động vật
+          </p>
+        </div>
       </div>
     </div>
   );
 }
+

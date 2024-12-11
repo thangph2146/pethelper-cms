@@ -1,33 +1,29 @@
 import React from 'react';
+import { Navbar } from '@/components/Navbar';
+import { Providers } from '@/components/Providers';
+import { Toaster } from 'react-hot-toast';
 import './globals.css';
-import Link from 'next/link';
+
+export const metadata = {
+  title: 'PetHelper - Hỗ trợ cứu trợ động vật',
+  description: 'Nền tảng kết nối và hỗ trợ cứu trợ động vật',
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="vi">
       <body>
-        <nav className="bg-white shadow-md">
-          <div className="container mx-auto px-4">
-            <div className="flex justify-between items-center h-16">
-              <Link href="/" className="text-xl font-bold">
-                Pet Helper
-              </Link>
-              <div className="space-x-4">
-                <Link href="/posts" className="hover:text-blue-500">
-                  Danh sách
-                </Link>
-                <Link href="/posts/create" className="hover:text-blue-500">
-                  Tạo bài đăng
-                </Link>
-              </div>
-            </div>
-          </div>
-        </nav>
-        <main>{children}</main>
+        <Providers>
+          <Navbar />
+          <main className="min-h-screen bg-gray-50">
+            {children}
+          </main>
+        </Providers>
+        <Toaster />
       </body>
     </html>
   );
