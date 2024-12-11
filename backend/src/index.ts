@@ -6,20 +6,19 @@ import mongoose from 'mongoose';
 import config from './config';
 import logger from './utils/logger';
 
-const connectDB = async (retries = 1) => {
+const connectDB = async () => {
   try {
     await mongoose.connect(config.mongoUri, {
       serverSelectionTimeoutMS: 5000,
       retryWrites: true,
     });
     logger.info('Đã kết nối với MongoDB');
-  } catch (error) {
-    if (retries > 0) {
-      logger.warn(`Kết nối thất bại, thử lại... (${retries} lần còn lại)`);
-      await new Promise(resolve => setTimeout(resolve, 5000));
-      return connectDB(retries - 1);
+  } catch (error: any) {
+    logger.error(`Lỗi kết nối MongoDB: ${error.message}`);
+    if (error.name === 'MongooseServerSelectionError') {
+      logger.error('Could not connect to any servers in your MongoDB Atlas cluster. One common reason is that you\'re trying to access the database from an IP that isn\'t whitelisted. Make sure your current IP address is on your Atlas cluster\'s IP whitelist: https://www.mongodb.com/docs/atlas/security-whitelist/');
     }
-    throw error;
+    process.exit(1);
   }
 };
 
