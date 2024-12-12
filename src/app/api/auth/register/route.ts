@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { hash } from 'bcrypt';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { ValidationError } from '@/types/error';
 import { errorHandler } from '@/middleware/error-handler';
 import { validateRegisterData } from '@/utils/validation';

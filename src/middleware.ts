@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { tokenUtils } from '@/utils/token';
-import prisma from '@/lib/prisma';
+import {  prisma } from '@/lib/prisma';
 
 // Các route không cần auth
 const publicRoutes = [

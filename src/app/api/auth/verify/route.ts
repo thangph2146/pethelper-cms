@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { ValidationError } from '@/types/error';
 import { errorHandler } from '@/middleware/error-handler';
 import { tokenUtils } from '@/utils/token';

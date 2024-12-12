@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { compare } from 'bcrypt';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { ValidationError } from '@/types/error';
 import { errorHandler } from '@/middleware/error-handler';
 import { tokenUtils } from '@/utils/token';
@@ -18,6 +18,7 @@ export async function POST(request: Request) {
       password: body.password
     };
 
+    console.log('Đang kết nối');
     // Kiểm tra user có tồn tại
     const user = await prisma.user.findUnique({
       where: { email: loginData.email },
