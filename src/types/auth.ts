@@ -20,6 +20,11 @@ export interface LoginResponse {
   token: string;
 }
 
+export interface RegisterResponse {
+  success: boolean;
+  message: string;
+}
+
 export interface AuthResponse {
   success: boolean;
   message: string;

@@ -2,7 +2,7 @@ import { LoginData, LoginResponse, RegisterData, ValidateSessionResponse } from 
 import { validateLoginData, validateRegisterData } from '@/utils/validation';
 import axios from '@/utils/axios';
 import { ValidationError } from '@/types/error';
-
+import { RegisterResponse } from '@/types/auth';
 export class AuthService {
   static async login(loginData: LoginData): Promise<LoginResponse> {
     try {
@@ -114,7 +114,7 @@ export class AuthService {
         validateRegisterData.phone(registerData.phone);
       }
 
-      const { data } = await axios.post('/api/auth/register', registerData);
+      const { data } = await axios.post<RegisterResponse>('/api/auth/register', registerData);
 
       if (!data.success) {
         throw new ValidationError(data.message);
@@ -153,7 +153,7 @@ export class AuthService {
 
   static async verifyEmail(token: string): Promise<void> {
     try {
-      const { data } = await axios.post('/api/auth/verify', { token });
+      const { data } = await axios.post<RegisterResponse>('/api/auth/verify', { token });
       
       if (!data.success) {
         throw new ValidationError(data.message);
@@ -172,7 +172,7 @@ export class AuthService {
 
   static async resendVerification(email: string): Promise<void> {
     try {
-      const { data } = await axios.post('/api/auth/verify/resend', { email });
+      const { data } = await axios.post<RegisterResponse>('/api/auth/verify/resend', { email });
       
       if (!data.success) {
         throw new ValidationError(data.message);
