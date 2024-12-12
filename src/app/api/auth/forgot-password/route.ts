@@ -1,6 +1,7 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import type { AuthError } from '@/types/auth';
 
 export async function POST(request: Request) {
   try {
@@ -21,11 +22,13 @@ export async function POST(request: Request) {
       message: 'Email khôi phục mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư của bạn.'
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const authError: AuthError = {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      code: 'FORGOT_PASSWORD_ERROR'
+    };
     return NextResponse.json(
-      { 
-        error: error.message || 'Đã có lỗi xảy ra khi gửi email khôi phục mật khẩu'
-      },
+      { error: authError },
       { status: 500 }
     );
   }

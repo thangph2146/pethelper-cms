@@ -1,35 +1,79 @@
-export class ValidationError extends Error {
-  code?: number;
-  field?: string;
+import type { AuthError } from '@supabase/supabase-js';
 
-  constructor(message: string, codeOrField?: number | string, field?: string) {
+interface ErrorDetails {
+  [key: string]: string | ErrorDetails;
+}
+
+export class ValidationError extends Error {
+  constructor(
+    message: string,
+    public readonly field?: string,
+    public readonly status: number = 400
+  ) {
     super(message);
-    
-    if (typeof codeOrField === 'number') {
-      this.code = codeOrField;
-      this.field = field;
-    } else {
-      this.field = codeOrField;
-    }
+    this.name = 'ValidationError';
   }
 }
 
 export class AuthenticationError extends Error {
-  status: number;
-
-  constructor(message: string, status = 401) {
+  constructor(
+    message: string = 'Unauthorized',
+    public readonly status: number = 401
+  ) {
     super(message);
     this.name = 'AuthenticationError';
-    this.status = status;
   }
 }
 
 export class AuthorizationError extends Error {
-  status: number;
-
-  constructor(message: string, status = 403) {
+  constructor(
+    message: string = 'Forbidden',
+    public readonly status: number = 403
+  ) {
     super(message);
     this.name = 'AuthorizationError';
-    this.status = status;
   }
-} 
+}
+
+export class SupabaseError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly details: ErrorDetails | null = null,
+    public readonly status: number = 500
+  ) {
+    super(message);
+    this.name = 'SupabaseError';
+  }
+
+  static fromAuthError(error: AuthError): SupabaseError {
+    return new SupabaseError(
+      error.message,
+      error.name,
+      null,
+      401
+    );
+  }
+}
+
+export interface AppError extends Error {
+  code?: string;
+  details?: unknown;
+}
+
+export type ErrorHandler = (error: unknown) => void;
+
+export interface ApiError {
+  message: string;
+  code: string;
+  details?: unknown;
+}
+
+export interface FormError {
+  field: string;
+  message: string;
+}
+
+export type ErrorResponse = {
+  error: ApiError | FormError[];
+}; 

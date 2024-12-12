@@ -1,6 +1,19 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import jwt from 'jsonwebtoken';
+import type { ApiError } from '@/lib/errors';
+
+// Định nghĩa interface cho decoded JWT payload
+interface JWTPayload {
+  id: string;
+  email: string;
+  role: string;
+}
+
+// Định nghĩa interface cho request với user
+interface RequestWithUser extends Request {
+  user: JWTPayload;
+}
 
 export function middleware(request: NextRequest) {
   // Bỏ qua route đăng nhập và đăng ký
@@ -21,13 +34,15 @@ export function middleware(request: NextRequest) {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const requestWithUser = request as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || '') as JWTPayload;
+    const requestWithUser = request as unknown as RequestWithUser;
     requestWithUser.user = decoded;
     return NextResponse.next();
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Token không hợp lệ';
+    console.error('Auth middleware error:', message);
     return NextResponse.json(
-      { error: 'Token không hợp lệ' },
+      { error: { message, code: 'AUTH_ERROR' } },
       { status: 401 }
     );
   }
@@ -35,4 +50,24 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: ['/api/:path*']
-}; 
+};
+
+export function withErrorHandler<T>(handler: (req: Request) => Promise<T>) {
+  return async (req: Request) => {
+    try {
+      return await handler(req);
+    } catch (error: unknown) {
+      console.error('API Error:', error);
+      if (error instanceof ApiError) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: error.statusCode }
+        );
+      }
+      return NextResponse.json(
+        { error: 'Internal Server Error' },
+        { status: 500 }
+      );
+    }
+  };
+} 

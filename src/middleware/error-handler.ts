@@ -1,82 +1,30 @@
 import { NextResponse } from 'next/server';
-import { ValidationError, AuthenticationError, AuthorizationError } from '@/types/error';
+import type { NextRequest } from 'next/server';
 
-export function errorHandler(error: any) {
+interface ApiError extends Error {
+  status?: number;
+  code?: string;
+  details?: {
+    [key: string]: string;
+  };
+}
+
+export function errorHandler(
+  request: NextRequest,
+  error: unknown
+) {
   console.error('API Error:', error);
 
-  // Xử lý ValidationError
-  if (error instanceof ValidationError) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: error.message,
-        field: error.field
-      },
-      { status: 400 }
-    );
-  }
-
-  // Xử lý AuthenticationError
-  if (error instanceof AuthenticationError) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: error.message
-      },
-      { status: 400 }
-    );
-  }
-
-  // Xử lý AuthorizationError
-  if (error instanceof AuthorizationError) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: error.message
-      },
-      { status: 400 }
-    );
-  }
-
-  // Xử lý Prisma errors
-    if (error instanceof any) {
-    switch (error.code) {
-      case 'P2002': // Unique constraint failed
-        return NextResponse.json(
-          {
-            success: false,
-            message: 'Dữ liệu đã tồn tại',
-            field: error.meta?.target as string
-          },
-          { status: 409 }
-        );
-
-      case 'P2025': // Record not found
-        return NextResponse.json(
-          {
-            success: false,
-            message: 'Không tìm thấy dữ liệu'
-          },
-          { status: 404 }
-        );
-
-      default:
-        return NextResponse.json(
-          {
-            success: false,
-            message: 'Lỗi database'
-          },
-          { status: 500 }
-        );
-    }
-  }
-
-  // Xử lý các lỗi khác
+  const apiError = error as ApiError;
+  const status = apiError.status || 500;
+  
   return NextResponse.json(
     {
       success: false,
-      message: error.message || 'Có lỗi xảy ra'
+      message: apiError.message || 'Internal Server Error',
+      details: apiError.details,
+      code: apiError.code
     },
-    { status: error.status || 500 }
+    { status }
   );
 } 

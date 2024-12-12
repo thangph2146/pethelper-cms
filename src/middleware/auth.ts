@@ -1,83 +1,85 @@
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { tokenUtils } from '@/utils/token';
 import { AuthenticationError, AuthorizationError } from '@/types/error';
+import type { SupabaseUser, SupabaseSession } from '@/types/supabase';
 
-export async function authMiddleware(request: NextRequest) {
+interface ValidateResponse {
+  session: SupabaseSession;
+  user: SupabaseUser;
+  response: NextResponse;
+}
+
+export async function validateSession(request: NextRequest): Promise<ValidateResponse> {
   try {
-    // Lấy token từ header
-    const token = tokenUtils.getTokenFromHeader(request.headers.get('Authorization'));
-    
-    if (!token) {
-      throw new AuthenticationError('Không tìm thấy token xác thực');
+    const res = NextResponse.next();
+    const supabase = createMiddlewareClient({ req: request, res });
+
+    // Kiểm tra session
+    const { data: { session }, error } = await supabase.auth.getSession();
+
+    if (error) {
+      throw new AuthenticationError('Phiên đăng nhập không hợp lệ');
     }
 
-    // Verify token
-    const decoded = tokenUtils.verifyToken(token);
-
-    // Kiểm tra session trong database
-    const session = await prisma.session.findUnique({
-      where: { token },
-      include: { user: true }
-    });
-
-    if (!session || session.expiresAt < new Date()) {
-      throw new AuthenticationError('Session không hợp lệ hoặc đã hết hạn');
+    if (!session) {
+      throw new AuthenticationError('Vui lòng đăng nhập để tiếp tục');
     }
 
-    // Kiểm tra trạng thái user
-    if (session.user.status !== 'active') {
-      throw new AuthorizationError('Tài khoản không hoạt động');
+    // Kiểm tra xác thực email nếu cần
+    if (!session.user.email_verified) {
+      throw new AuthorizationError('Vui lòng xác thực email để tiếp tục');
     }
 
-    // Thêm user info vào headers
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-user-id', session.user.id);
-    requestHeaders.set('x-user-role', session.user.role);
-    requestHeaders.set('x-session-id', session.id);
-
-    // Cập nhật lastActivity
-    await prisma.session.update({
-      where: { id: session.id },
-      data: { lastActivity: new Date() }
-    });
-
-    return NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    });
+    return {
+      session,
+      user: session.user,
+      response: res
+    };
 
   } catch (error) {
     if (error instanceof AuthenticationError || error instanceof AuthorizationError) {
-      return NextResponse.json(
-        { success: false, message: error.message },
-        { status: error.status }
-      );
+      throw error;
     }
-
-    return NextResponse.json(
-      { success: false, message: 'Lỗi xác thực' },
-      { status: 401 }
-    );
+    throw new AuthenticationError('Có lỗi xảy ra khi xác thực');
   }
 }
 
-export function adminMiddleware(request: NextRequest) {
-  const userRole = request.headers.get('x-user-role');
+export async function validateAdmin(request: NextRequest): Promise<ValidateResponse> {
+  const { session, user, response } = await validateSession(request);
+
+  // Kiểm tra role admin từ metadata
+  const isAdmin = user.app_metadata?.role === 'admin';
+
+  if (!isAdmin) {
+    throw new AuthorizationError('Bạn không có quyền truy cập trang này');
+  }
+
+  return { session, user, response };
+}
+
+export async function validateOwnership(
+  request: NextRequest, 
+  resourceId: string
+): Promise<ValidateResponse> {
+  const { session, user, response } = await validateSession(request);
+
+  // Kiểm tra quyền sở hữu resource
+  const supabase = createMiddlewareClient({ req: request, res: response });
   
-  if (userRole !== 'admin') {
-    throw new AuthorizationError('Không có quyền truy cập');
+  const { data, error } = await supabase
+    .from('resources')
+    .select('user_id')
+    .eq('id', resourceId)
+    .single();
+
+  if (error || !data) {
+    throw new AuthorizationError('Không tìm thấy tài nguyên');
   }
 
-  return NextResponse.next();
-}
+  if (data.user_id !== user.id) {
+    throw new AuthorizationError('Bạn không có quyền thực hiện hành động này');
+  }
 
-// Helper function để lấy user info từ request
-export function getUserFromRequest(request: NextRequest) {
-  return {
-    id: request.headers.get('x-user-id'),
-    role: request.headers.get('x-user-role'),
-    sessionId: request.headers.get('x-session-id')
-  };
+  return { session, user, response };
 } 

@@ -7,19 +7,18 @@ import { Card, CardHeader, CardContent, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/form/form-field';
 import { AuthService } from '@/services/auth.service';
-import type { RegisterFormState, RegisterFormErrors } from '@/types/form';
+import type { RegisterFormData, RegisterError } from '@/types/form';
 import { toast } from 'react-hot-toast';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState<RegisterFormState>({
+  const [formData, setFormData] = useState<RegisterFormData>({
     email: '',
     password: '',
-    confirmPassword: '',
     name: ''
   });
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<RegisterFormErrors>({});
+  const [error, setError] = useState<RegisterError | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -28,62 +27,25 @@ export default function RegisterPage() {
       [name]: value
     }));
     // Clear error khi user thay đổi input
-    if (errors[name as keyof RegisterFormErrors]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: undefined
-      }));
+    if (error && error.field === name) {
+      setError(null);
     }
-  };
-
-  const validateForm = () => {
-    const newErrors: RegisterFormErrors = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!formData.email) {
-      newErrors.email = 'Vui lòng nhập email';
-    } else if (!emailRegex.test(formData.email)) {
-      newErrors.email = 'Email không hợp lệ';
-    }
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'Vui lòng nhập họ tên';
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'Vui lòng nhập mật khẩu';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Vui lòng xác nhận mật khẩu';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
-
     setLoading(true);
     try {
-      await AuthService.register({
-        email: formData.email,
-        password: formData.password,
-        name: formData.name.trim()
-      });
-      toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
-      router.push('/auth/login?registered=true');
-    } catch (error: any) {
-      setErrors({
-        form: error.message
-      });
-      toast.error(error.message || 'Đã có lỗi xảy ra khi đăng ký');
+      await AuthService.register(formData);
+      toast.success('Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.');
+      router.push('/auth/login?verify=pending');
+    } catch (err: unknown) {
+      const error: RegisterError = {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        code: 'REGISTER_ERROR'
+      };
+      setError(error);
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
@@ -97,9 +59,9 @@ export default function RegisterPage() {
         </CardHeader>
 
         <CardContent>
-          {errors.form && (
+          {error && (
             <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
-              {errors.form}
+              {error.message}
             </div>
           )}
 
@@ -111,7 +73,7 @@ export default function RegisterPage() {
               type="email"
               value={formData.email}
               onChange={handleChange}
-              error={errors.email}
+              error={error && error.field === 'email' ? error.message : undefined}
             />
 
             <FormField
@@ -120,7 +82,7 @@ export default function RegisterPage() {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              error={errors.name}
+              error={error && error.field === 'name' ? error.message : undefined}
             />
 
             <FormField
@@ -130,7 +92,7 @@ export default function RegisterPage() {
               type="password"
               value={formData.password}
               onChange={handleChange}
-              error={errors.password}
+              error={error && error.field === 'password' ? error.message : undefined}
             />
 
             <FormField
@@ -140,7 +102,7 @@ export default function RegisterPage() {
               type="password"
               value={formData.confirmPassword}
               onChange={handleChange}
-              error={errors.confirmPassword}
+              error={error && error.field === 'confirmPassword' ? error.message : undefined}
             />
 
             <Button

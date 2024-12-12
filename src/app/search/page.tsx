@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useInfinitePosts } from '@/hooks/use-infinite-posts';
-import PostCard from '@/components/PostCard';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import type { SearchPostParams } from '@/types/post';
+import { PostCard } from '@/components/PostCard';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import type { IPost, PostFilters } from '@/types/post';
 
 const TYPE_OPTIONS = [
   { value: 'all', label: 'Tất cả' },
@@ -30,11 +30,11 @@ const URGENCY_OPTIONS = [
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
-  const [filters, setFilters] = useState<SearchPostParams>({
+  const [filters, setFilters] = useState<PostFilters>({
     keyword: searchParams.get('q') || '',
-    type: (searchParams.get('type') as SearchPostParams['type']) || undefined,
-    status: (searchParams.get('status') as SearchPostParams['status']) || undefined,
-    urgency: (searchParams.get('urgency') as SearchPostParams['urgency']) || undefined,
+    type: (searchParams.get('type') as PostFilters['type']) || undefined,
+    status: (searchParams.get('status') as PostFilters['status']) || undefined,
+    urgency: (searchParams.get('urgency') as PostFilters['urgency']) || undefined,
     limit: 12,
   });
 
@@ -44,9 +44,9 @@ export default function SearchPage() {
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
-  } = useInfinitePosts(filters);
+  } = useInfinitePosts(filters as PostFilters);
 
-  const allPosts = data?.pages.flatMap(page => page.data) || [];
+  const allPosts = data?.pages.flatMap(page => page.data as IPost[]) || [];
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

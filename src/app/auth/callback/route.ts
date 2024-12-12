@@ -1,6 +1,7 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import type { ApiError } from '@/types/error';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -21,11 +22,16 @@ export async function GET(request: Request) {
       // Redirect to success URL
       return NextResponse.redirect(new URL(next, request.url));
       
-    } catch (error: any) {
-      // Redirect to error page with message
-      const errorUrl = new URL('/auth/error', request.url);
-      errorUrl.searchParams.set('error', error.message);
-      return NextResponse.redirect(errorUrl);
+    } catch (error: unknown) {
+      const apiError: ApiError = {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: 'AUTH_CALLBACK_ERROR'
+      };
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/auth/error?error=${encodeURIComponent(
+          apiError.message
+        )}`
+      );
     }
   }
 

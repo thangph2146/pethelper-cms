@@ -31,7 +31,8 @@ export function PostComment({ postId, comments, onCommentAdded }: PostCommentPro
       setContent('');
       onCommentAdded();
       toast.success('Thêm bình luận thành công');
-    } catch (error) {
+    } catch (error: Error) {
+      console.error(error);
       toast.error('Có lỗi xảy ra khi thêm bình luận');
     } finally {
       setIsSubmitting(false);

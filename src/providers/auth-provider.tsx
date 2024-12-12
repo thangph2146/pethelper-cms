@@ -2,113 +2,134 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AuthService } from '@/services/auth.service';
-import { toast } from 'react-hot-toast';
-import { useLoading } from '@/providers/loading-provider';
-import { Spinner } from '@/components/ui/spinner';
-
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-  phone?: string;
-  address?: string;
-  email_verified: boolean;
-}
+import { supabase } from '@/lib/supabase';
+import type { User, AuthError } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
+  error: string | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+}
+
+interface AuthState {
+  user: User | null;
+  loading: boolean;
+  error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { setLoading: setGlobalLoading } = useLoading();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    loading: true,
+    error: null
+  });
 
   useEffect(() => {
-    checkSession();
-  }, []);
+    // Kiểm tra session khi component mount
+    checkUser();
 
-  const checkSession = async () => {
-    try {
-      const { session, user } = await AuthService.getSession();
-      if (session && user) {
-        setUser(user);
+    // Subscribe to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setState(prev => ({
+          ...prev,
+          user: session?.user || null,
+          loading: false
+        }));
+
+        if (event === 'SIGNED_OUT') {
+          router.push('/auth/login');
+        }
       }
-    } catch (error) {
-      console.error('Lỗi khi kiểm tra session:', error);
-    } finally {
-      setLoading(false);
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router]);
+
+  const checkUser = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      setState(prev => ({
+        ...prev,
+        user,
+        loading: false
+      }));
+    } catch (error: unknown) {
+      const authError = error as AuthError;
+      setState(prev => ({
+        ...prev,
+        error: authError.message,
+        loading: false
+      }));
     }
   };
 
-  const login = async (email: string, password: string) => {
-    setGlobalLoading(true);
+  const signIn = async (email: string, password: string) => {
     try {
-      const { session, user } = await AuthService.login({ email, password });
-      if (session && user) {
-        setUser(user);
-        toast.success('Đăng nhập thành công');
-      }
-    } catch (error: any) {
-      toast.error(error.message || 'Đăng nhập thất bại');
-      throw error;
-    } finally {
-      setGlobalLoading(false);
+      const { data: { user }, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+
+      setState(prev => ({
+        ...prev,
+        user,
+        error: null
+      }));
+
+      router.push('/');
+    } catch (error: unknown) {
+      const authError = error as AuthError;
+      setState(prev => ({
+        ...prev,
+        error: authError.message
+      }));
     }
   };
 
-  const logout = async () => {
-    setGlobalLoading(true);
+  const signOut = async () => {
     try {
-      await AuthService.logout();
-      setUser(null);
-      router.push('/auth/login');
-      router.refresh();
-      toast.success('Đăng xuất thành công');
-    } catch (error: any) {
-      toast.error('Đã có lỗi xảy ra khi đăng xuất');
-      console.error('Lỗi khi đăng xuất:', error);
-    } finally {
-      setGlobalLoading(false);
-    }
-  };
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
 
-  const refreshUser = async () => {
-    try {
-      const { session, user } = await AuthService.getSession();
-      if (session && user) {
-        setUser(user);
-      }
-    } catch (error) {
-      console.error('Lỗi khi refresh user:', error);
+      setState(prev => ({
+        ...prev,
+        user: null,
+        error: null
+      }));
+    } catch (error: unknown) {
+      const authError = error as AuthError;
+      setState(prev => ({
+        ...prev,
+        error: authError.message
+      }));
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
-      {loading ? (
-        <div className="min-h-screen flex items-center justify-center">
-          <Spinner size="md" />
-        </div>
-      ) : (
-        children
-      )}
+    <AuthContext.Provider value={{
+      ...state,
+      signIn,
+      signOut
+    }}>
+      {children}
     </AuthContext.Provider>
   );
 }
 
-export function useAuthContext() {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuthContext must be used within an AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 } 

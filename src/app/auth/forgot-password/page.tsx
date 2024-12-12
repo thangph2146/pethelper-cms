@@ -7,18 +7,25 @@ import { Card, CardHeader, CardContent, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/form/form-field';
 import { AuthService } from '@/services/auth.service';
-import { toast } from 'react-hot-toast';
+import type { ApiError } from '@/types/error';
+
+interface ForgotPasswordError extends ApiError {
+  field?: string;
+}
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<ForgotPasswordError | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
-      setError('Vui lòng nhập email');
+      setError({
+        message: 'Vui lòng nhập email',
+        code: 'FORGOT_PASSWORD_ERROR'
+      });
       return;
     }
 
@@ -27,8 +34,12 @@ export default function ForgotPasswordPage() {
       await AuthService.forgotPassword(email);
       toast.success('Email khôi phục mật khẩu đã được gửi');
       router.push('/auth/login?reset=requested');
-    } catch (error: any) {
-      setError(error.message);
+    } catch (err: unknown) {
+      const error: ForgotPasswordError = {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        code: 'FORGOT_PASSWORD_ERROR'
+      };
+      setError(error);
       toast.error(error.message || 'Đã có lỗi xảy ra');
     } finally {
       setLoading(false);
@@ -45,7 +56,7 @@ export default function ForgotPasswordPage() {
         <CardContent>
           {error && (
             <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
-              {error}
+              {error.message}
             </div>
           )}
 
@@ -57,7 +68,7 @@ export default function ForgotPasswordPage() {
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
-                setError('');
+                setError(null);
               }}
               placeholder="Nhập email của bạn"
               error={error}

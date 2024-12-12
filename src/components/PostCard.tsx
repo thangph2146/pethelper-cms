@@ -1,50 +1,35 @@
 'use client';
 
-import React from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { IPost } from '@/types/post';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import type { PostRow } from '@/types/supabase';
+import { useRouter } from 'next/navigation';
 
-interface Props {
-  post: IPost;
+interface PostCardProps {
+  post: PostRow;
 }
 
-export function PostCard({ post }: Props) {
+export function PostCard({ post }: PostCardProps) {
+  const router = useRouter();
+
   return (
-    <div className="border rounded-lg overflow-hidden shadow-md">
-      {post.images[0] && (
-        <div className="relative h-48">
-          <Image
-            src={post.images[0]}
-            alt={post.title}
-            fill
-            className="object-cover"
-          />
+    <Card className="p-4">
+      <div className="flex justify-between items-start">
+        <div>
+          <h3 className="text-lg font-semibold">{post.title}</h3>
+          <p className="text-gray-600 mt-2 line-clamp-3">{post.content}</p>
+          <div className="mt-4 text-sm text-gray-500">
+            {new Date(post.created_at).toLocaleDateString('vi-VN')}
+          </div>
         </div>
-      )}
-      <div className="p-4">
-        <h2 className="text-xl font-semibold mb-2">
-          <Link href={`/posts/${post._id}`} className="hover:text-blue-500">
-            {post.title}
-          </Link>
-        </h2>
-        <p className="text-gray-600 mb-2 line-clamp-2">{post.content}</p>
-        <div className="flex gap-2 mb-2">
-          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">
-            {post.category === 'dog' ? 'Chó' : post.category === 'cat' ? 'Mèo' : 'Khác'}
-          </span>
-          <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm">
-            {post.status === 'need-help' ? 'Cần giúp đỡ' : 
-             post.status === 'being-helped' ? 'Đang được giúp' : 'Đã được giúp'}
-          </span>
-        </div>
-        <div className="text-sm text-gray-500">
-          <p>Địa điểm: {post.location}</p>
-          <p>Liên hệ: {post.contact.phone}</p>
-          <p>Đăng bởi: {post.author.name}</p>
-          <p>Ngày đăng: {new Date(post.createdAt).toLocaleDateString('vi-VN')}</p>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push(`/posts/${post.id}`)}
+        >
+          Xem chi tiết
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 } 

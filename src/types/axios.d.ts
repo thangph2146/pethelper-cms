@@ -1,25 +1,46 @@
-import { AxiosResponse } from 'axios';
-import type { IPost, PostResponse, PostsResponse } from './post';
+import type { AxiosRequestConfig } from 'axios';
+import type { Database } from './supabase';
+
+type Tables = Database['public']['Tables'];
+type TableNames = keyof Tables;
+
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: {
+    code: string;
+    details?: Record<string, string>;
+  };
+}
+
+interface RequestConfig<T = unknown> extends AxiosRequestConfig {
+  data?: T;
+  params?: Record<string, string | number | boolean>;
+}
+
+interface PaginationParams {
+  page?: number;
+  limit?: number;
+  sort?: string;
+  order?: 'asc' | 'desc';
+}
+
+interface FilterParams {
+  [key: string]: string | number | boolean | undefined;
+}
+
+interface QueryParams extends PaginationParams, FilterParams {}
 
 declare module 'axios' {
-  export interface AxiosResponse<T = any> {
-    data: T;
-  }
-
   export interface AxiosInstance {
-    get<T = any>(url: string, config?: any): Promise<T>;
-    get<T = PostsResponse>(url: '/posts', config?: any): Promise<T>;
-    get<T = PostResponse>(url: `/posts/${string}`, config?: any): Promise<T>;
-    get<T = PostsResponse>(url: `/users/${string}/posts`, config?: any): Promise<T>;
-
-    post<T = any>(url: string, data?: any, config?: any): Promise<T>;
-    post<T = PostResponse>(url: '/posts', data?: any, config?: any): Promise<T>;
-    post<T = PostResponse>(url: `/posts/${string}/comments`, data?: any, config?: any): Promise<T>;
-
-    put<T = any>(url: string, data?: any, config?: any): Promise<T>;
-    put<T = PostResponse>(url: `/posts/${string}`, data?: any, config?: any): Promise<T>;
-
-    delete<T = any>(url: string, config?: any): Promise<T>;
-    delete<T = { message: string }>(url: `/posts/${string}`, config?: any): Promise<T>;
+    request<T = unknown>(config: RequestConfig<T>): Promise<ApiResponse<T>>;
+    get<T = unknown>(url: string, config?: RequestConfig): Promise<ApiResponse<T>>;
+    delete<T = unknown>(url: string, config?: RequestConfig): Promise<ApiResponse<T>>;
+    head<T = unknown>(url: string, config?: RequestConfig): Promise<ApiResponse<T>>;
+    options<T = unknown>(url: string, config?: RequestConfig): Promise<ApiResponse<T>>;
+    post<T = unknown, D = unknown>(url: string, data?: D, config?: RequestConfig): Promise<ApiResponse<T>>;
+    put<T = unknown, D = unknown>(url: string, data?: D, config?: RequestConfig): Promise<ApiResponse<T>>;
+    patch<T = unknown, D = unknown>(url: string, data?: D, config?: RequestConfig): Promise<ApiResponse<T>>;
   }
 } 

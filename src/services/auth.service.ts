@@ -1,202 +1,110 @@
-import { LoginFormState, RegisterFormState } from '@/types/form';
+import { supabase } from '@/lib/supabase';
+import type { User, AuthError, AuthResponse } from '@supabase/supabase-js';
+
+interface SignUpData {
+  email: string;
+  password: string;
+  metadata?: {
+    name: string;
+    avatar_url?: string;
+  };
+}
+
+interface AuthResult {
+  user: User | null;
+  session: AuthResponse['data']['session'];
+}
 
 export class AuthService {
-  static async login({ email, password }: Pick<LoginFormState, 'email' | 'password'>) {
+  static async signUp(data: SignUpData): Promise<AuthResult> {
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
+      const { data: authData, error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: data.metadata
+        }
       });
 
-      const data = await response.json();
+      if (error) throw error;
 
-      if (!response.ok) {
-        throw {
-          field: 'form',
-          message: data.error || 'Đã có lỗi xảy ra khi đăng nhập'
-        };
-      }
-
-      return data;
-    } catch (error: any) {
-      throw error;
+      return {
+        user: authData.user,
+        session: authData.session
+      };
+    } catch (error: unknown) {
+      const authError = error as AuthError;
+      throw new Error(authError.message || 'Đăng ký thất bại');
     }
   }
 
-  static async validateSession() {
+  static async signIn(email: string, password: string): Promise<AuthResult> {
     try {
-      const response = await fetch('/api/auth/validate-session');
-      const data = await response.json();
-      return data.valid;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  static async logout() {
-    try {
-      const response = await fetch('/api/auth/session', {
-        method: 'DELETE'
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
 
-      if (!response.ok) {
-        throw new Error('Đã có lỗi xảy ra khi đăng xuất');
-      }
+      if (error) throw error;
 
-      // Xóa thông tin ghi nhớ đăng nhập
-      try {
-        localStorage.removeItem('savedEmail');
-        localStorage.removeItem('rememberMe');
-      } catch (error) {
-        console.error('Lỗi khi xóa thông tin ghi nhớ đăng nhập:', error);
-      }
-
-      return true;
-    } catch (error) {
-      return false;
+      return {
+        user: authData.user,
+        session: authData.session
+      };
+    } catch (error: unknown) {
+      const authError = error as AuthError;
+      throw new Error(authError.message || 'Đăng nhập thất bại');
     }
   }
 
-  static async verifyEmail(token: string) {
+  static async signOut(): Promise<void> {
     try {
-      const response = await fetch('/api/auth/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ token }),
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error: unknown) {
+      const authError = error as AuthError;
+      throw new Error(authError.message || 'Đăng xuất thất bại');
+    }
+  }
+
+  static async resetPassword(email: string): Promise<void> {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+    } catch (error: unknown) {
+      const authError = error as AuthError;
+      throw new Error(authError.message || 'Gửi email reset password thất bại');
+    }
+  }
+
+  static async updatePassword(newPassword: string): Promise<void> {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw {
-          field: 'form',
-          message: data.error || 'Đã có lỗi xảy ra khi xác thực email'
-        };
-      }
-
-      return data;
-    } catch (error: any) {
-      throw error;
+      if (error) throw error;
+    } catch (error: unknown) {
+      const authError = error as AuthError;
+      throw new Error(authError.message || 'Cập nhật mật khẩu thất bại');
     }
   }
 
-  static async resendVerification(email: string) {
+  static async getSession(): Promise<AuthResult> {
     try {
-      const response = await fetch('/api/auth/resend-verification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) throw error;
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw {
-          message: data.error || 'Đã có lỗi xảy ra khi gửi lại email xác thực'
-        };
+      if (!session) {
+        throw new Error('Không tìm thấy session');
       }
 
-      return data;
-    } catch (error: any) {
-      throw error;
-    }
-  }
-
-  static async getSession() {
-    try {
-      const response = await fetch('/api/auth/session');
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw {
-          field: 'form',
-          message: data.error || 'Đã có lỗi xảy ra khi lấy thông tin session'
-        };
-      }
-
-      return data;
-    } catch (error: any) {
-      throw error;
-    }
-  }
-
-  static async register({ email, password, name }: Omit<RegisterFormState, 'confirmPassword'>) {
-    try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password, name }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw {
-          field: 'form',
-          message: data.error || 'Đã có lỗi xảy ra khi đăng ký'
-        };
-      }
-
-      return data;
-    } catch (error: any) {
-      throw error;
-    }
-  }
-
-  static async forgotPassword(email: string) {
-    try {
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw {
-          message: data.error || 'Đã có lỗi xảy ra khi gửi email khôi phục mật khẩu'
-        };
-      }
-
-      return data;
-    } catch (error: any) {
-      throw error;
-    }
-  }
-
-  static async resetPassword(password: string) {
-    try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw {
-          message: data.error || 'Đã có lỗi xảy ra khi đặt lại mật khẩu'
-        };
-      }
-
-      return data;
-    } catch (error: any) {
-      throw error;
+      return {
+        user: session.user,
+        session
+      };
+    } catch (error: unknown) {
+      const authError = error as AuthError;
+      throw new Error(authError.message || 'Lấy thông tin session thất bại');
     }
   }
 }

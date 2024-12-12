@@ -2,6 +2,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthService } from '@/services/auth.service';
 
+interface AuthError {
+  message: string;
+  status?: number;
+}
+
 interface User {
   id: string;
   email: string;
@@ -12,7 +17,11 @@ interface User {
 
 interface Session {
   user: User | null;
-  session: any | null;
+  session: {
+    access_token: string;
+    refresh_token: string;
+    expires_at: number;
+  } | null;
   loading: boolean;
   error: string | null;
 }
@@ -39,12 +48,13 @@ export function useAuth() {
         loading: false,
         error: null
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const authError = error as AuthError;
       setSession({
         user: null,
         session: null,
         loading: false,
-        error: error.message
+        error: authError.message
       });
     }
   };
@@ -54,8 +64,9 @@ export function useAuth() {
       const data = await AuthService.login({ email, password });
       await checkSession();
       return data;
-    } catch (error) {
-      throw error;
+    } catch (error: unknown) {
+      const authError = error as AuthError;
+      throw new Error(authError.message);
     }
   };
 
@@ -69,10 +80,11 @@ export function useAuth() {
         error: null
       });
       router.push('/auth/login');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const authError = error as AuthError;
       setSession(prev => ({
         ...prev,
-        error: error.message
+        error: authError.message
       }));
     }
   };
@@ -82,8 +94,9 @@ export function useAuth() {
       const data = await AuthService.verifyEmail(token);
       await checkSession();
       return data;
-    } catch (error) {
-      throw error;
+    } catch (error: unknown) {
+      const authError = error as AuthError;
+      throw new Error(authError.message);
     }
   };
 

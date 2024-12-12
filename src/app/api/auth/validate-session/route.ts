@@ -22,7 +22,8 @@ export async function GET() {
         .single();
 
       if (userError) {
-        console.error('Lỗi khi lấy thông tin user:', userError);
+        console.error('Error fetching user data:', userError);
+        throw userError;
       }
 
       return NextResponse.json({
@@ -32,7 +33,12 @@ export async function GET() {
     }
 
     return NextResponse.json({ valid: false });
-  } catch (error) {
-    return NextResponse.json({ valid: false });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Validate session error:', message);
+    return NextResponse.json(
+      { error: { message, code: 'VALIDATE_SESSION_ERROR' } },
+      { status: 500 }
+    );
   }
 } 

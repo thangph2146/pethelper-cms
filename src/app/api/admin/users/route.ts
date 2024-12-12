@@ -4,7 +4,7 @@ import { authOptions } from '../../auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import { User } from '@backend/models/User';
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== 'admin') {
@@ -20,9 +20,11 @@ export async function GET(req: Request) {
       .sort({ createdAt: -1 });
 
     return NextResponse.json(users);
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching users:', message);
     return NextResponse.json(
-      { error: 'Lỗi khi lấy danh sách người dùng' },
+      { error: message },
       { status: 500 }
     );
   }

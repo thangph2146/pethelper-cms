@@ -1,8 +1,9 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import type { SessionResponse } from '@/types/auth';
 
-export async function GET() {
+export async function GET(): Promise<Response> {
   try {
     const supabase = createRouteHandlerClient({ cookies });
     
@@ -25,18 +26,26 @@ export async function GET() {
         console.error('Lỗi khi lấy thông tin user:', userError);
       }
 
-      return NextResponse.json({
+      return NextResponse.json<SessionResponse>({ 
         session,
-        user: userData
+        user: userData,
+        error: null
       });
     }
 
-    return NextResponse.json({ session: null });
+    return NextResponse.json<SessionResponse>({ 
+      session: null,
+      error: null
+    });
 
-  } catch (error: any) {
-    return NextResponse.json(
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Đã có lỗi xảy ra khi lấy thông tin session';
+    return NextResponse.json<SessionResponse>(
       { 
-        error: error.message || 'Đã có lỗi xảy ra khi lấy thông tin session',
+        error: {
+          message,
+          code: 'SESSION_ERROR'
+        },
         session: null 
       },
       { status: 500 }
@@ -60,9 +69,10 @@ export async function DELETE() {
       message: 'Đăng xuất thành công'
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Đã có lỗi xảy ra khi đăng xuất';
     return NextResponse.json(
-      { error: error.message || 'Đã có lỗi xảy ra khi đăng xuất' },
+      { error: { message, code: 'LOGOUT_ERROR' } },
       { status: 500 }
     );
   }

@@ -56,9 +56,11 @@ export async function POST(request: Request) {
     const imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
 
     return NextResponse.json({ url: imageUrl });
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Upload error:', message);
     return NextResponse.json(
-      { message: 'Lỗi khi upload ảnh' },
+      { error: { message, code: 'UPLOAD_ERROR' } },
       { status: 500 }
     );
   }
@@ -90,9 +92,11 @@ export async function DELETE(request: Request) {
     );
 
     return NextResponse.json({ message: 'Xóa ảnh thành công' });
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Delete file error:', message);
     return NextResponse.json(
-      { message: 'Lỗi khi xóa ảnh' },
+      { error: { message, code: 'DELETE_FILE_ERROR' } },
       { status: 500 }
     );
   }

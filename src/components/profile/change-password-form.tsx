@@ -7,7 +7,7 @@ import { FormField } from '@/components/form/form-field';
 import { toast } from 'react-hot-toast';
 import { useProfile } from '@/hooks/use-profile';
 
-interface PasswordFormData {
+interface ChangePasswordFormData {
   currentPassword: string;
   newPassword: string;
   confirmPassword: string;
@@ -15,12 +15,12 @@ interface PasswordFormData {
 
 export function ChangePasswordForm() {
   const { changePassword, loading } = useProfile();
-  const [formData, setFormData] = useState<PasswordFormData>({
+  const [formData, setFormData] = useState<ChangePasswordFormData>({
     currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
-  const [errors, setErrors] = useState<Partial<PasswordFormData>>({});
+  const [errors, setErrors] = useState<Partial<ChangePasswordFormData>>({});
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -29,7 +29,7 @@ export function ChangePasswordForm() {
       [name]: value
     }));
     // Clear error khi user thay đổi input
-    if (errors[name as keyof PasswordFormData]) {
+    if (errors[name as keyof ChangePasswordFormData]) {
       setErrors(prev => ({
         ...prev,
         [name]: undefined
@@ -38,7 +38,7 @@ export function ChangePasswordForm() {
   };
 
   const validateForm = () => {
-    const newErrors: Partial<PasswordFormData> = {};
+    const newErrors: Partial<ChangePasswordFormData> = {};
 
     if (!formData.currentPassword) {
       newErrors.currentPassword = 'Vui lòng nhập mật khẩu hiện tại';
@@ -74,8 +74,9 @@ export function ChangePasswordForm() {
         newPassword: '',
         confirmPassword: ''
       });
-    } catch (error: any) {
-      toast.error(error.message || 'Đã có lỗi xảy ra khi đổi mật khẩu');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Đã có lỗi xảy ra khi đổi mật khẩu';
+      toast.error(message);
     }
   };
 

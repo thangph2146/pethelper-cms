@@ -1,6 +1,7 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import type { AuthError } from '@/types/auth';
 
 export async function POST(request: Request) {
   try {
@@ -38,9 +39,13 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(authData);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const authError: AuthError = {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      code: 'AUTH_ERROR'
+    };
     return NextResponse.json(
-      { error: error.message || 'Đã có lỗi xảy ra' },
+      { error: authError },
       { status: 500 }
     );
   }

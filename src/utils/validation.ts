@@ -1,60 +1,52 @@
-import { ValidationError } from '@/types/error';
+import { z } from 'zod';
+import type { ValidationError } from '@/types/error';
 
-export const validateRegisterData = {
-  name: (name: string) => {
-    if (!name || name.trim().length < 2) {
-      throw new ValidationError('Tên phải có ít nhất 2 ký tự', 'name');
-    }
-  },
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
 
-  email: (email: string) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email)) {
-      throw new ValidationError('Email không hợp lệ', 'email');
-    }
-  },
+export const loginSchema = z.object({
+  email: z.string().email('Email không hợp lệ'),
+  password: z.string().min(8, 'Mật khẩu phải có ít nhất 8 ký tự')
+});
 
-  password: (password: string) => {
-    if (!password || password.length < 6) {
-      throw new ValidationError('Mật khẩu phải có ít nhất 6 ký tự', 'password');
-    }
-  },
+export const registerSchema = loginSchema.extend({
+  name: z.string().min(2, 'Tên phải có ít nhất 2 ký tự'),
+  password: z.string().regex(
+    passwordRegex,
+    'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường và số'
+  ),
+  confirmPassword: z.string()
+}).refine(data => data.password === data.confirmPassword, {
+  message: 'Mật khẩu xác nhận không khớp',
+  path: ['confirmPassword']
+});
 
-  phone: (phone: string) => {
-    const phoneRegex = /(84|0[3|5|7|8|9])+([0-9]{8})\b/;
-    if (!phoneRegex.test(phone)) {
-      throw new ValidationError('Số điện thoại không hợp lệ', 'phone');
-    }
-  }
-};
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(8, 'Mật khẩu phải có ít nhất 8 ký tự'),
+  newPassword: z.string().regex(
+    passwordRegex,
+    'Mật khẩu phải có ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường và số'
+  ),
+  confirmPassword: z.string()
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: 'Mật khẩu xác nhận không khớp',
+  path: ['confirmPassword']
+});
 
-export const validateLoginData = {
-  email: (email: string) => {
-    if (!email) {
-      throw new ValidationError('Email là bắt buộc', 400, 'email');
-    }
-    const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
-    if (!emailRegex.test(email)) {
-      throw new ValidationError('Email không hợp lệ', 400, 'email');
-    }
-  },
-
-  password: (password: string) => {
-    if (!password) {
-      throw new ValidationError('Mật khẩu là bắt buộc', 400, 'password');
-    }
-    if (password.length < 6) {
-      throw new ValidationError('Mật khẩu phải có ít nhất 6 ký tự', 400, 'password');
-    }
-  },
-
-  form: (data: {email: string; password: string}) => {
-    try {
-      validateLoginData.email(data.email);
-      validateLoginData.password(data.password);
-      return true;
-    } catch (error) {
-      return false;
-    }
+export const validateForm = async <T>(
+  schema: z.ZodSchema<T>,
+  data: unknown
+): Promise<{ success: boolean; data?: T; errors?: ValidationError[] }> => {
+  try {
+    const validData = await schema.parseAsync(data);
+    return { success: true, data: validData };
+  } catch (zodError) {
+    if (zodError instanceof z.ZodError) {
+      const errors = zodError.errors.map(e => ({
+        field: e.path.join('.'),
+        message: e.message
+      }));
+        return { success: false, errors };
+      }
+    throw zodError;
   }
 };

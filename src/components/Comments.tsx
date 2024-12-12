@@ -1,28 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { postApi } from '@/utils/axiosInstance';
-import { LoadingSpinner } from './LoadingSpinner';
 import { formatDate } from '@/utils/format';
-import type { IComment } from '@/types/comment';
+import type { Comment } from '@/types/comment';
 
-interface Props {
+interface CommentsProps {
   postId: string;
-  userId: string;
+  comments: Comment[];
 }
 
-export function Comments({ postId, userId }: Props) {
+export default function Comments({ comments, postId }: CommentsProps) {
   const [content, setContent] = useState('');
   const queryClient = useQueryClient();
-
-  const { data: comments, isLoading } = useQuery({
-    queryKey: ['comments', postId],
-    queryFn: async () => {
-      const response = await postApi.getComments(postId);
-      return response.data.data;
-    }
-  });
 
   const addCommentMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -51,8 +42,6 @@ export function Comments({ postId, userId }: Props) {
       addCommentMutation.mutate(content);
     }
   };
-
-  if (isLoading) return <LoadingSpinner />;
 
   return (
     <div className="mt-8">

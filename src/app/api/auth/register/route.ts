@@ -1,6 +1,7 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import type { AuthError } from '@/types/auth';
 
 export async function POST(request: Request) {
   try {
@@ -47,18 +48,14 @@ export async function POST(request: Request) {
       message: 'Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.'
     });
 
-  } catch (error: any) {
-    let message = 'Đã có lỗi xảy ra khi đăng ký';
-    let status = 500;
-
-    if (error.message.includes('already registered')) {
-      message = 'Email này đã được đăng ký';
-      status = 400;
-    }
-
+  } catch (error: unknown) {
+    const authError: AuthError = {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      code: 'REGISTER_ERROR'
+    };
     return NextResponse.json(
-      { error: message },
-      { status }
+      { error: authError },
+      { status: 500 }
     );
   }
 } 

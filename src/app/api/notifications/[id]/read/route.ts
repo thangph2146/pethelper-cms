@@ -19,25 +19,24 @@ export async function PATCH(
 
     await dbConnect();
     const notification = await Notification.findOneAndUpdate(
-      { 
-        _id: params.id,
-        userId: session.user.id 
-      },
+      { _id: params.id, userId: session.user.id },
       { isRead: true },
       { new: true }
     );
 
     if (!notification) {
       return NextResponse.json(
-        { error: 'Không tìm thấy thông báo' },
+        { error: { message: 'Không tìm thấy thông báo', code: 'NOT_FOUND' } },
         { status: 404 }
       );
     }
 
     return NextResponse.json(notification);
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Read notification error:', message);
     return NextResponse.json(
-      { error: 'Lỗi khi cập nhật thông báo' },
+      { error: { message, code: 'READ_NOTIFICATION_ERROR' } },
       { status: 500 }
     );
   }

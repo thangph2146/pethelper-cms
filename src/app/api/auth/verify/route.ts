@@ -1,6 +1,7 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import type { AuthError } from '@/types/auth';
 
 export async function GET(request: Request) {
   try {
@@ -48,10 +49,14 @@ export async function GET(request: Request) {
       new URL('/auth/login?verified=true', request.url)
     );
 
-  } catch (error: any) {
-    // Redirect về trang error với thông báo lỗi
-    const errorUrl = new URL('/auth/error', request.url);
-    errorUrl.searchParams.set('error', error.message || 'Xác thực email thất bại');
-    return NextResponse.redirect(errorUrl);
+  } catch (error: unknown) {
+    const authError: AuthError = {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      code: 'VERIFY_ERROR'
+    };
+    return NextResponse.json(
+      { error: authError },
+      { status: 500 }
+    );
   }
 } 

@@ -1,43 +1,38 @@
-import { connectDB } from '@/lib/mongodb';
-import { User } from '@backend/models/User';
-import { getServerSession } from 'next-auth';
-import { NextResponse } from 'next/server';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import type { ApiError } from '@/types/supabase';
 
-export async function POST(req: Request) {
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const supabase = createRouteHandlerClient({ cookies });
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      throw sessionError;
+    }
+
+    if (!session?.user) {
       return NextResponse.json(
-        { message: 'Unauthorized' },
+        { error: { message: 'Unauthorized', code: 'UNAUTHORIZED' } },
         { status: 401 }
       );
     }
 
-    const { postId } = await req.json();
-    await connectDB();
+    const { data: savedPosts, error: postsError } = await supabase
+      .from('saved_posts')
+      .select('post_id, post:posts(*)')
+      .eq('user_id', session.user.id);
 
-    const user = await User.findById(session.user.id);
-    if (!user) {
-      return NextResponse.json(
-        { message: 'User not found' },
-        { status: 404 }
-      );
+    if (postsError) {
+      throw postsError;
     }
 
-    if (!user.savedPosts.includes(postId)) {
-      user.savedPosts.push(postId);
-      await user.save();
-    }
-
-    return NextResponse.json(
-      { message: 'Post saved successfully' },
-      { status: 200 }
-    );
-  } catch (error) {
-    return NextResponse.json(
-      { message: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json(savedPosts);
+  } catch (error: unknown) {
+    const apiError: ApiError = {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      code: 'SAVED_POSTS_ERROR'
+    };
+    console.error('Saved posts error:', apiError);
+    return NextResponse.json({ error: apiError }, { status: 500 });
   }
 } 

@@ -31,35 +31,47 @@ export interface IPost {
   createdAt: string;
   updatedAt: string;
   animalType?: string;
-  $assertPopulated?: any;
-  $clearModifiedPaths?: any;
-  $clone?: any;
-  // Add the remaining 51 properties here
+  $assertPopulated?: <T>() => T;
+  $clearModifiedPaths?: () => void;
+  $clone?: () => IPost;
 }
 
-export type CreatePostInput = Omit<IPost, '_id' | 'author' | 'likes' | 'comments' | 'createdAt' | 'updatedAt'>;
-export type UpdatePostInput = Partial<CreatePostInput>;
-
-export interface PostResponse {
-  posts: IPost[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-} 
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
+export interface CreatePostData {
+  title: string;
+  content: string;
+  image_url?: string;
+  category_id?: string;
+  tags?: string[];
 }
 
-export type PostsResponse = ApiResponse<PostResponse>;
-export type GetPostsParams = {
-  page?: number;
-  limit?: number;
+export interface UpdatePostData {
+  title?: string;
+  content?: string;
+  image_url?: string;
+  category_id?: string;
+  tags?: string[];
+  status?: 'draft' | 'published' | 'archived';
+}
+
+export interface PostFilters {
   category?: string;
-  status?: string;
-};
-export type CreatePostData = Omit<IPost, '_id' | 'author' | 'likes' | 'comments' | 'createdAt' | 'updatedAt'>;
+  tag?: string;
+  user_id?: string;
+  status?: 'draft' | 'published' | 'archived';
+  search?: string;
+}
+
+export interface PostsResponse {
+  data: IPost[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+export interface PostStats {
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+}

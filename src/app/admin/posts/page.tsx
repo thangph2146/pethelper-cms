@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useInfinitePosts } from '@/hooks/use-infinite-posts';
 import { PostService } from '@/services/post.service';
 import type { AdminPost } from '@/types/admin';
-import type { IPost } from '@backend/models/Post';
 
 const STATUS_LABELS = {
   'cần_giúp_đỡ': 'Cần giúp đỡ',
@@ -19,7 +18,7 @@ export default function AdminPostsPage() {
   const router = useRouter();
   const [selectedStatus, setSelectedStatus] = useState<keyof typeof STATUS_LABELS | ''>('');
 
-  const { posts, loading, error, hasMore, loadMore } = useInfinitePosts({
+  const { posts, loading, hasMore, loadMore } = useInfinitePosts({
     filters: selectedStatus ? { status: selectedStatus } : undefined,
     limit: 20
   });

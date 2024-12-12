@@ -7,55 +7,40 @@ import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/form/form-field';
 import { AuthService } from '@/services/auth.service';
 import { toast } from 'react-hot-toast';
+import type { ApiError } from '@/types/error';
 
-interface FormErrors {
-  password?: string;
-  confirmPassword?: string;
-  form?: string;
+interface ResetPasswordFormData {
+  password: string;
+  confirmPassword: string;
+}
+
+interface ResetPasswordError extends ApiError {
+  field?: string;
 }
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ResetPasswordFormData>({
     password: '',
     confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<FormErrors>({});
-
-  const validateForm = () => {
-    const newErrors: FormErrors = {};
-
-    if (!formData.password) {
-      newErrors.password = 'Vui lòng nhập mật khẩu mới';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Vui lòng xác nhận mật khẩu';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const [error, setError] = useState<ResetPasswordError | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
-
     setLoading(true);
     try {
       await AuthService.resetPassword(formData.password);
       toast.success('Đặt lại mật khẩu thành công');
       router.push('/auth/login?reset=success');
-    } catch (error: any) {
-      setErrors({
-        form: error.message
-      });
-      toast.error(error.message || 'Đã có lỗi xảy ra');
+    } catch (err: unknown) {
+      const error: ResetPasswordError = {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        code: 'RESET_PASSWORD_ERROR'
+      };
+      setError(error);
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
@@ -69,9 +54,9 @@ export default function ResetPasswordPage() {
         </CardHeader>
 
         <CardContent>
-          {errors.form && (
+          {error && (
             <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
-              {errors.form}
+              {error.message}
             </div>
           )}
 
@@ -86,14 +71,14 @@ export default function ResetPasswordPage() {
                   ...prev,
                   password: e.target.value
                 }));
-                if (errors.password) {
-                  setErrors(prev => ({
+                if (error?.field === 'password') {
+                  setError(prev => ({
                     ...prev,
-                    password: undefined
+                    field: undefined
                   }));
                 }
               }}
-              error={errors.password}
+              error={error?.field === 'password' ? error.message : undefined}
             />
 
             <FormField
@@ -106,14 +91,14 @@ export default function ResetPasswordPage() {
                   ...prev,
                   confirmPassword: e.target.value
                 }));
-                if (errors.confirmPassword) {
-                  setErrors(prev => ({
+                if (error?.field === 'confirmPassword') {
+                  setError(prev => ({
                     ...prev,
-                    confirmPassword: undefined
+                    field: undefined
                   }));
                 }
               }}
-              error={errors.confirmPassword}
+              error={error?.field === 'confirmPassword' ? error.message : undefined}
             />
 
             <Button

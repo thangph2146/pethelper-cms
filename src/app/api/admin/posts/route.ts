@@ -4,6 +4,7 @@ import { authOptions } from '../../auth/[...nextauth]/route';
 import { connectToMongoDB } from  '@/lib/mongodb';
 import { Post } from '@backend/models/Post';
 import { ApiError } from '@/lib/errors';  
+import type { ApiResponse } from '@/types/api';
 
 export async function GET(req: Request) {
   try {
@@ -15,7 +16,14 @@ export async function GET(req: Request) {
     await connectToMongoDB();
     const { searchParams } = new URL(req.url);
     
-    const query: Record<string, any> = {};
+    interface PostQuery {
+      status?: string;
+      $or?: Array<{
+        title?: { $regex: string; $options: string };
+        description?: { $regex: string; $options: string };
+      }>;
+    }
+    const query: PostQuery = {};
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const status = searchParams.get('status');
@@ -38,7 +46,8 @@ export async function GET(req: Request) {
       Post.countDocuments(query)
     ]);
 
-    return NextResponse.json({
+    return NextResponse.json<ApiResponse<{posts: Post[]; pagination: Pagination}>>({ 
+      success: true, 
       data: {
         posts,
         pagination: {

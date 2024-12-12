@@ -1,10 +1,11 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { ApiResponse } from '@/types/common';
 
-export async function POST(request: Request) {
+export async function POST(request: Request): Promise<Response> {
   try {
-    const { currentPassword, newPassword } = await request.json();
+    const { newPassword } = await request.json();
     const supabase = createRouteHandlerClient({ cookies });
 
     // Lấy session hiện tại
@@ -29,15 +30,18 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({
+    return NextResponse.json<ApiResponse>({ 
       success: true,
-      message: 'Đổi mật khẩu thành công'
+      message: 'Password changed successfully'
     });
 
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || 'Đã có lỗi xảy ra khi đổi mật khẩu' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return NextResponse.json<ApiResponse>({
+      success: false,
+      error: {
+        code: 'CHANGE_PASSWORD_ERROR',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }, { status: 500 });
   }
 } 

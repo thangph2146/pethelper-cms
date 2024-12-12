@@ -25,11 +25,10 @@ export async function POST(request: Request) {
       message: 'Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư của bạn.'
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { 
-        error: error.message || 'Đã có lỗi xảy ra khi gửi lại email xác thực'
-      },
+      { error: { message, code: 'RESEND_VERIFICATION_ERROR' } },
       { status: 500 }
     );
   }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardHeader, CardContent, CardFooter, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { FormField } from '@/components/form/form-field';
 import { useAuthContext } from '@/providers/auth-provider';
 import { useRememberLogin } from '@/hooks/use-remember-login';
 import type { LoginFormState, LoginFormErrors } from '@/types/form';
-import { EnvelopeIcon, LockClosedIcon } from '@heroicons/react/24/outline';
+import { toast } from 'react-hot-toast';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -74,10 +74,9 @@ export default function LoginPage() {
       router.push('/');
       router.refresh();
       
-    } catch (error: any) {
-      setErrors({
-        form: error.message || 'Đã có lỗi xảy ra khi đăng nhập'
-      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Đã có lỗi xảy ra';
+      toast.error(message);
     } finally {
       setLoading(false);
     }

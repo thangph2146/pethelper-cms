@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { UploadService } from '@/services/upload.service';
+import Image from 'next/image';
 
 export default function EditProfilePage() {
   const { data: session, update } = useSession();
@@ -26,8 +27,9 @@ export default function EditProfilePage() {
       const imageUrl = await UploadService.uploadImage(file);
       setFormData(prev => ({ ...prev, image: imageUrl }));
       toast.success('Tải ảnh lên thành công');
-    } catch (err) {
-      toast.error('Lỗi khi tải ảnh lên');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Lỗi khi tải ảnh lên';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -47,8 +49,9 @@ export default function EditProfilePage() {
       });
       toast.success('Cập nhật thông tin thành công');
       router.push('/profile');
-    } catch (err) {
-      toast.error('Lỗi khi cập nhật thông tin');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Lỗi khi cập nhật thông tin';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -63,9 +66,11 @@ export default function EditProfilePage() {
           <div>
             <label className="block mb-2">Ảnh đại diện</label>
             <div className="flex items-center gap-4">
-              <img
+              <Image
                 src={formData.image || '/default-avatar.png'}
                 alt="Avatar"
+                width={200}
+                height={200}
                 className="w-20 h-20 rounded-full object-cover"
               />
               <input

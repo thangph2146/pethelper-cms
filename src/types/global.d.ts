@@ -1,8 +1,8 @@
-import { Connection, Model } from 'mongoose';
-
 declare global {
-  var mongoose: {
-    conn: Connection | null;
-    promise: Promise<Connection> | null;
-  };
-} 
+  interface Window {
+    SUPABASE_URL: string;
+    SUPABASE_ANON_KEY: string;
+  }
+}
+
+export {};

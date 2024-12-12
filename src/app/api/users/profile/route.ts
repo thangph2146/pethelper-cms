@@ -1,40 +1,41 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
-import dbConnect from '@/lib/dbConnect';
-import { User } from '@backend/models/User';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import type { Profile, ApiError } from '@/types/supabase';
 
-export async function PATCH(req: Request) {
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const supabase = createRouteHandlerClient({ cookies });
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+    if (sessionError) {
+      throw sessionError;
+    }
+
     if (!session?.user) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: { message: 'Unauthorized', code: 'UNAUTHORIZED' } },
         { status: 401 }
       );
     }
 
-    await dbConnect();
-    const body = await req.json();
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
 
-    const user = await User.findByIdAndUpdate(
-      session.user.id,
-      { $set: body },
-      { new: true }
-    ).select('name email image phone address');
-
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Không tìm thấy người dùng' },
-        { status: 404 }
-      );
+    if (profileError) {
+      throw profileError;
     }
 
-    return NextResponse.json(user);
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Lỗi khi cập nhật thông tin' },
-      { status: 500 }
-    );
+    return NextResponse.json<Profile>(profile);
+  } catch (error: unknown) {
+    const apiError: ApiError = {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      code: 'PROFILE_ERROR'
+    };
+    console.error('Profile error:', apiError);
+    return NextResponse.json({ error: apiError }, { status: 500 });
   }
 } 

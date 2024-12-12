@@ -55,9 +55,11 @@ export async function POST(
     }
 
     return NextResponse.json(populatedPost.comments[populatedPost.comments.length - 1]);
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Comment error:', message);
     return NextResponse.json(
-      { message: 'Lỗi khi thêm bình luận' },
+      { error: { message, code: 'COMMENT_ERROR' } },
       { status: 500 }
     );
   }
@@ -74,15 +76,17 @@ export async function GET(
 
     if (!post) {
       return NextResponse.json(
-        { message: 'Không tìm thấy bài đăng' },
+        { error: { message: 'Không tìm thấy bài đăng', code: 'NOT_FOUND' } },
         { status: 404 }
       );
     }
 
     return NextResponse.json(post.comments);
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Get comments error:', message);
     return NextResponse.json(
-      { message: 'Lỗi khi lấy bình luận' },
+      { error: { message, code: 'GET_COMMENTS_ERROR' } },
       { status: 500 }
     );
   }

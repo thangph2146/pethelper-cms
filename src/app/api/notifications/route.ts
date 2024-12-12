@@ -4,7 +4,7 @@ import { authOptions } from '../auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import Notification from '@backend/models/Notification';
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -20,9 +20,11 @@ export async function GET(req: Request) {
       .limit(50);
 
     return NextResponse.json({ notifications });
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Notification error:', message);
     return NextResponse.json(
-      { error: 'Lỗi khi lấy thông báo' },
+      { error: { message, code: 'NOTIFICATION_ERROR' } },
       { status: 500 }
     );
   }

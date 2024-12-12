@@ -26,9 +26,10 @@ export async function GET(
 
     return NextResponse.json({ data: post });
   } catch (error) {
-    console.error('Error in GET /api/posts/[id]:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Post error:', message);
     return NextResponse.json(
-      { message: 'Lỗi khi lấy thông tin bài đăng' },
+      { error: { message, code: 'POST_ERROR' } },
       { status: 500 }
     );
   }
@@ -92,7 +93,7 @@ export async function DELETE(
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json(
-        { message: 'Unauthorized' },
+        { error: { message: 'Unauthorized', code: 'UNAUTHORIZED' } },
         { status: 401 }
       );
     }
@@ -102,23 +103,25 @@ export async function DELETE(
 
     if (!post) {
       return NextResponse.json(
-        { message: 'Không tìm thấy bài đăng' },
+        { error: { message: 'Không tìm thấy bài đăng', code: 'NOT_FOUND' } },
         { status: 404 }
       );
     }
 
     if (post.authorId.toString() !== session.user.id && session.user.role !== 'admin') {
       return NextResponse.json(
-        { message: 'Không có quyền xóa' },
+        { error: { message: 'Không có quyền xóa', code: 'FORBIDDEN' } },
         { status: 403 }
       );
     }
 
     await post.deleteOne();
     return NextResponse.json({ message: 'Xóa bài đăng thành công' });
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Delete post error:', message);
     return NextResponse.json(
-      { message: 'Lỗi khi xóa bài đăng' },
+      { error: { message, code: 'DELETE_POST_ERROR' } },
       { status: 500 }
     );
   }

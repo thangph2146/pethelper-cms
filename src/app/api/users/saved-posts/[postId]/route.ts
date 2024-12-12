@@ -18,16 +18,18 @@ export async function POST(
     }
 
     await dbConnect();
-    const user = await User.findByIdAndUpdate(
-      session.user.id,
-      { $addToSet: { savedPosts: params.postId } },
-      { new: true }
+    const { id: userId } = session.user;
+    await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { savedPosts: params.postId } }
     );
 
     return NextResponse.json({ message: 'Đã lưu bài đăng' });
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Saved post error:', message);
     return NextResponse.json(
-      { error: 'Lỗi khi lưu bài đăng' },
+      { error: { message, code: 'SAVE_POST_ERROR' } },
       { status: 500 }
     );
   }
@@ -47,16 +49,18 @@ export async function DELETE(
     }
 
     await dbConnect();
-    const user = await User.findByIdAndUpdate(
-      session.user.id,
-      { $pull: { savedPosts: params.postId } },
-      { new: true }
+    const { id: userId } = session.user;
+    await User.findByIdAndUpdate(
+      userId,
+      { $pull: { savedPosts: params.postId } }
     );
 
     return NextResponse.json({ message: 'Đã bỏ lưu bài đăng' });
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Delete file error:', message);
     return NextResponse.json(
-      { error: 'Lỗi khi bỏ lưu bài đăng' },
+      { error: { message, code: 'DELETE_FILE_ERROR' } },
       { status: 500 }
     );
   }

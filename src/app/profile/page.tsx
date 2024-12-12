@@ -7,6 +7,11 @@ import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/form/form-field';
 import { toast } from 'react-hot-toast';
 import { ChangePasswordForm } from '@/components/profile/change-password-form';
+import type { ApiError } from '@/types/error';
+
+interface ProfileError extends ApiError {
+  field?: string;
+}
 
 interface ProfileFormData {
   name: string;
@@ -38,8 +43,12 @@ export default function ProfilePage() {
     try {
       await updateProfile(formData);
       toast.success('Cập nhật thông tin thành công');
-    } catch (error: any) {
-      toast.error(error.message || 'Đã có lỗi xảy ra khi cập nhật thông tin');
+    } catch (err: unknown) {
+      const error: ProfileError = {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        code: 'PROFILE_ERROR'
+      };
+      toast.error(error.message);
     } finally {
       setUpdating(false);
     }

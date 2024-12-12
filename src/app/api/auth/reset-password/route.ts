@@ -1,6 +1,7 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import type { AuthError } from '@/types/auth';
 
 export async function POST(request: Request) {
   try {
@@ -21,11 +22,13 @@ export async function POST(request: Request) {
       message: 'Đặt lại mật khẩu thành công'
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const authError: AuthError = {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      code: 'RESET_PASSWORD_ERROR'
+    };
     return NextResponse.json(
-      { 
-        error: error.message || 'Đã có lỗi xảy ra khi đặt lại mật khẩu'
-      },
+      { error: authError },
       { status: 500 }
     );
   }

@@ -42,9 +42,11 @@ export async function PATCH(
     }
 
     return NextResponse.json(user);
-  } catch (error) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error updating user:', message);
     return NextResponse.json(
-      { error: 'Lỗi khi cập nhật người dùng' },
+      { error: message },
       { status: 500 }
     );
   }

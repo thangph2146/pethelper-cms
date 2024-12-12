@@ -22,8 +22,8 @@ export const SavePostButton = ({ postId, initialSaved = false }: SavePostButtonP
         toast.success('Đã lưu bài đăng');
       }
       setSaved(!saved);
-    } catch (error) {
-      toast.error('Có lỗi xảy ra');
+    } catch {
+      toast.error("Couldn't save post");
     } finally {
       setLoading(false);
     }

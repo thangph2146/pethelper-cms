@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 
 interface User {
   _id: string;
@@ -19,15 +20,16 @@ export default function AdminUsersPage() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         const response = await axios.get('/api/admin/users');
         setUsers(response.data);
-      } catch (err) {
-        setError('Lỗi khi tải danh sách người dùng');
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Lỗi khi xử lý';
+        console.error(message);
+        toast.error(message);
       } finally {
         setLoading(false);
       }
@@ -70,8 +72,6 @@ export default function AdminUsersPage() {
     router.push('/');
     return null;
   }
-
-  if (error) return <div className="text-red-500">{error}</div>;
 
   return (
     <div className="container mx-auto px-4 py-8">

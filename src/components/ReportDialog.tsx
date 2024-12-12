@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { ReportService } from '@/services/report.service';
+import type { ApiError } from '@/types/error';
 
-const REPORT_REASONS = [
-  { value: 'inappropriate', label: 'Nội dung không phù hợp' },
-  { value: 'spam', label: 'Spam' },
-  { value: 'fake', label: 'Thông tin giả mạo' },
-  { value: 'other', label: 'Lý do khác' }
-];
+interface ReportError extends ApiError {
+  field?: string;
+}
 
 interface ReportDialogProps {
   postId: string;
@@ -18,22 +16,23 @@ export const ReportDialog = ({ postId, onClose, onSuccess }: ReportDialogProps) 
   const [reason, setReason] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ReportError | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reason) return;
-
+  const handleSubmit = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       await ReportService.createReport(postId, {
         reason,
         description: description.trim() || undefined
       });
       onSuccess();
       onClose();
-    } catch (err) {
-      setError('Có lỗi xảy ra khi gửi báo cáo');
+    } catch (error: unknown) {
+      const apiError: ReportError = {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: 'REPORT_ERROR'
+      };
+      setError(apiError);
     } finally {
       setLoading(false);
     }
@@ -74,7 +73,7 @@ export const ReportDialog = ({ postId, onClose, onSuccess }: ReportDialogProps) 
           </div>
 
           {error && (
-            <div className="text-red-500">{error}</div>
+            <div className="text-red-500">{error.message}</div>
           )}
 
           <div className="flex justify-end gap-2">

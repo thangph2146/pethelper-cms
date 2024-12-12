@@ -27,8 +27,8 @@ export const ShareButtons = ({
     try {
       await navigator.clipboard.writeText(url);
       toast.success('Đã sao chép liên kết!');
-    } catch (err) {
-      toast.error('Không thể sao chép liên kết');
+    } catch {
+      toast.error("Couldn't copy link");
     }
   };
 

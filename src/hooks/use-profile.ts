@@ -1,76 +1,65 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ProfileService } from '@/services/profile.service';
+import { toast } from 'react-hot-toast';
+import type { ApiError } from '@/types/api';
 
-interface Profile {
-  id: string;
-  email: string;
+interface ProfileData {
   name?: string;
-  phone?: string;
-  address?: string;
-  created_at: string;
-  updated_at: string;
+  email?: string;
+  avatar?: File;
+}
+
+interface PasswordData {
+  currentPassword: string;
+  newPassword: string;
 }
 
 export function useProfile() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
+  const updateProfile = async (data: ProfileData) => {
     try {
       setLoading(true);
-      const data = await ProfileService.getProfile();
-      setProfile(data);
-      setError(null);
-    } catch (error: any) {
-      setError(error.message);
-      setProfile(null);
+      await ProfileService.updateProfile(data);
+      toast.success('Cập nhật thông tin thành công');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      toast.error(apiError.message || 'Có lỗi xảy ra khi cập nhật thông tin');
     } finally {
       setLoading(false);
     }
   };
 
-  const updateProfile = async (profileData: Partial<Profile>) => {
+  const changePassword = async ({ currentPassword, newPassword }: PasswordData) => {
     try {
       setLoading(true);
-      const updatedProfile = await ProfileService.updateProfile(profileData);
-      setProfile(updatedProfile);
-      setError(null);
-      return updatedProfile;
-    } catch (error: any) {
-      setError(error.message);
-      throw error;
+      await ProfileService.changePassword({ currentPassword, newPassword });
+      toast.success('Đổi mật khẩu thành công');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      toast.error(apiError.message || 'Có lỗi xảy ra khi đổi mật khẩu');
     } finally {
       setLoading(false);
     }
   };
 
-  const changePassword = async (currentPassword: string, newPassword: string) => {
+  const deleteAccount = async () => {
     try {
       setLoading(true);
-      await ProfileService.changePassword({
-        currentPassword,
-        newPassword
-      });
-      setError(null);
-    } catch (error: any) {
-      setError(error.message);
-      throw error;
+      await ProfileService.deleteAccount();
+      toast.success('Xóa tài khoản thành công');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      toast.error(apiError.message || 'Có lỗi xảy ra khi xóa tài khoản');
     } finally {
       setLoading(false);
     }
   };
 
   return {
-    profile,
     loading,
-    error,
-    loadProfile,
     updateProfile,
-    changePassword
+    changePassword,
+    deleteAccount
   };
 } 

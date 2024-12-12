@@ -1,7 +1,18 @@
-interface ProfileData {
+import { supabase } from '@/lib/supabase';
+import type { PostgrestError, AuthError } from '@supabase/supabase-js';
+
+interface Profile {
+  id: string;
+  email: string;
   name?: string;
-  phone?: string;
-  address?: string;
+  avatar_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface UpdateProfileData {
+  name?: string;
+  avatar_url?: string;
 }
 
 interface ChangePasswordData {
@@ -9,69 +20,77 @@ interface ChangePasswordData {
   newPassword: string;
 }
 
+type ServiceError = PostgrestError | AuthError | Error;
+
 export class ProfileService {
-  static async getProfile() {
+  static async getProfile(): Promise<Profile> {
     try {
-      const response = await fetch('/api/profile');
-      const data = await response.json();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!user) throw new Error('Không tìm thấy người dùng');
 
-      if (!response.ok) {
-        throw {
-          message: data.error || 'Đã có lỗi xảy ra khi lấy thông tin profile'
-        };
-      }
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+      if (!data) throw new Error('Không tìm thấy profile');
 
       return data;
-    } catch (error: any) {
-      throw error;
+    } catch (error: unknown) {
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.message || 'Lấy thông tin profile thất bại');
     }
   }
 
-  static async updateProfile(profileData: ProfileData) {
+  static async updateProfile(data: UpdateProfileData): Promise<Profile> {
     try {
-      const response = await fetch('/api/profile', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(profileData),
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      if (!user) throw new Error('Không tìm thấy người dùng');
+
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .update(data)
+        .eq('id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      if (!profile) throw new Error('Cập nhật profile thất bại');
+
+      return profile;
+    } catch (error: unknown) {
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.message || 'Cập nhật profile thất bại');
+    }
+  }
+
+  static async changePassword(data: ChangePasswordData): Promise<void> {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: data.newPassword
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw {
-          message: data.error || 'Đã có lỗi xảy ra khi cập nhật profile'
-        };
-      }
-
-      return data;
-    } catch (error: any) {
-      throw error;
+      if (error) throw error;
+    } catch (error: unknown) {
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.message || 'Đổi mật khẩu thất bại');
     }
   }
 
-  static async changePassword(data: ChangePasswordData) {
+  static async deleteAccount(): Promise<void> {
     try {
-      const response = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+      const { error } = await supabase.auth.admin.deleteUser(
+        (await supabase.auth.getUser()).data.user?.id || ''
+      );
 
-      const responseData = await response.json();
-
-      if (!response.ok) {
-        throw {
-          message: responseData.error || 'Đã có lỗi xảy ra khi đổi mật khẩu'
-        };
-      }
-
-      return responseData;
-    } catch (error: any) {
-      throw error;
+      if (error) throw error;
+    } catch (error: unknown) {
+      const serviceError = error as ServiceError;
+      throw new Error(serviceError.message || 'Xóa tài khoản thất bại');
     }
   }
-} 
+}

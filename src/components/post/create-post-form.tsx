@@ -42,7 +42,8 @@ export function CreatePostForm() {
       });
       toast.success('Tạo bài đăng thành công');
       router.push('/posts');
-    } catch (error) {
+    } catch (error: Error) {
+      console.error(error);
       toast.error('Có lỗi xảy ra khi tạo bài đăng');
     } finally {
       setIsSubmitting(false);

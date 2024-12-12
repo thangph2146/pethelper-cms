@@ -1,42 +1,49 @@
 'use client';
 
-import React from 'react';
-import { usePosts } from '@/hooks/use-posts';
-import { PostCard } from './PostCard';
-import { LoadingSpinner } from './LoadingSpinner';
-import { ErrorMessage } from './ErrorMessage';
-import type { GetPostsParams } from '@/types/api';
+import { useQuery } from '@tanstack/react-query';
+import { Spinner } from '@/components/ui/spinner';
+import { PostCard } from '@/components/PostCard';
+import { useSupabase } from '@/hooks/use-supabase';
+import type { PostRow } from '@/types/supabase';
 
-interface Props {
-  filters?: Omit<GetPostsParams, 'page' | 'limit'>;
-  limit?: number;
-  showPagination?: boolean;
-}
+export function PostList() {
+  const { fetchPosts } = useSupabase();
 
-export function PostList({ filters, limit, showPagination = false }: Props) {
-  const { posts, pagination, loading, error } = usePosts({
-    ...filters,
-    limit,
-    page: 1
+  const { data: posts, isLoading, error } = useQuery<PostRow[]>({
+    queryKey: ['posts'],
+    queryFn: fetchPosts,
+    staleTime: 1000 * 60 // 1 phút
   });
 
-  if (loading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage message="Không thể tải danh sách bài đăng" />;
-  if (!posts.length) return <div className="text-center py-8">Không có bài đăng nào</div>;
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8 text-red-500">
+        Đã có lỗi xảy ra khi tải danh sách bài đăng
+      </div>
+    );
+  }
+
+  if (!posts?.length) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        Chưa có bài đăng nào
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {posts.map((post) => (
-          <PostCard key={post._id} post={post} />
-        ))}
-      </div>
-
-      {showPagination && pagination.totalPages > 1 && (
-        <div className="mt-8 flex justify-center">
-          {/* Thêm component Pagination ở đây */}
-        </div>
-      )}
+    <div className="space-y-4">
+      {posts.map((post) => (
+        <PostCard key={post.id} post={post} />
+      ))}
     </div>
   );
 } 

@@ -28,9 +28,11 @@ export async function GET() {
     }
 
     return NextResponse.json(profile);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Profile error:', message);
     return NextResponse.json(
-      { error: error.message || 'Đã có lỗi xảy ra khi lấy thông tin profile' },
+      { error: { message, code: 'PROFILE_ERROR' } },
       { status: 500 }
     );
   }
@@ -69,9 +71,11 @@ export async function PATCH(request: Request) {
     }
 
     return NextResponse.json(profile);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Profile error:', message);
     return NextResponse.json(
-      { error: error.message || 'Đã có lỗi xảy ra khi cập nhật profile' },
+      { error: { message, code: 'PROFILE_ERROR' } },
       { status: 500 }
     );
   }

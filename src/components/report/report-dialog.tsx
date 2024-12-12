@@ -55,7 +55,7 @@ export function ReportDialog({ postId }: ReportDialogProps) {
       setIsOpen(false);
       setSelectedReason('');
       setDescription('');
-    } catch (error) {
+    } catch {
       toast.error('Có lỗi xảy ra khi gửi báo cáo');
     } finally {
       setIsSubmitting(false);

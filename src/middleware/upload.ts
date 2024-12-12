@@ -1,61 +1,74 @@
 import multer from 'multer';
-import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import { v2 as cloudinary } from 'cloudinary';
-import logger from '../utils/logger';
+import type { Request, Response, NextFunction } from 'express';
+import type { StorageEngine, Options, Multer, FileFilterCallback } from 'multer';
+import { ValidationError } from './error';
 
-// Cấu hình Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
+interface UploadOptions {
+  maxSize?: number;
+  allowedTypes?: string[];
+}
 
-// Cấu hình storage cho multer sử dụng Cloudinary
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'pethelper', // tên folder trên Cloudinary
-    allowed_formats: ['jpg', 'png', 'jpeg', 'gif'],
-    transformation: [{ width: 500, height: 500, crop: 'limit' }]
-  } as any
-});
-
-// Cấu hình upload
-const upload = multer({ 
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // giới hạn 5MB
+const storage: StorageEngine = multer.diskStorage({
+  destination: (
+    req: Request, 
+    file: Express.Multer.File, 
+    cb: (error: Error | null, destination: string) => void
+  ) => {
+    cb(null, 'uploads/');
   },
-  fileFilter: (req, file, cb) => {
-    // Kiểm tra file type
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Chỉ chấp nhận file hình ảnh!') as any, false);
-    }
+  filename: (
+    req: Request, 
+    file: Express.Multer.File, 
+    cb: (error: Error | null, filename: string) => void
+  ) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix);
   }
 });
 
-// Middleware xử lý lỗi upload
-const handleUploadError = (err: any, req: any, res: any, next: any) => {
-  if (err instanceof multer.MulterError) {
-    logger.error('Multer upload error:', err);
-    return res.status(400).json({
-      success: false,
-      message: 'Lỗi upload file',
-      error: err.message
-    });
-  }
-  
-  if (err) {
-    logger.error('Upload error:', err);
-    return res.status(500).json({
-      success: false,
-      message: err.message || 'Có lỗi xảy ra khi upload file'
-    });
-  }
-  
-  next();
+const fileFilter = (options: UploadOptions = {}) => {
+  return (req: Request, file: Express.Multer.File, callback: FileFilterCallback) => {
+    const { allowedTypes = ['image/jpeg', 'image/png'] } = options;
+
+    if (!allowedTypes.includes(file.mimetype)) {
+      callback(new ValidationError('Định dạng file không được hỗ trợ'));
+      return;
+    }
+
+    callback(null, true);
+  };
 };
 
-export { upload, handleUploadError };
+export const upload = (options: UploadOptions = {}): Multer => {
+  const { maxSize = 5 * 1024 * 1024 } = options; // Default 5MB
+
+  const multerOptions: Options = {
+    storage,
+    fileFilter: fileFilter(options),
+    limits: {
+      fileSize: maxSize
+    }
+  };
+
+  return multer(multerOptions);
+};
+
+export const handleUploadError = (
+  err: Error, 
+  req: Request, 
+  res: Response, 
+  next: NextFunction
+) => {
+  if (err instanceof multer.MulterError) {
+    switch (err.code) {
+      case 'LIMIT_FILE_SIZE':
+        return next(new ValidationError('File quá lớn'));
+      case 'LIMIT_FILE_COUNT':
+        return next(new ValidationError('Số lượng file vượt quá giới hạn'));
+      default:
+        return next(new ValidationError('Lỗi khi upload file'));
+    }
+  }
+  
+  next(err);
+};

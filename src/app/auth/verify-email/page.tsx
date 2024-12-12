@@ -5,6 +5,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AuthService } from '@/services/auth.service';
+import { toast } from 'react-hot-toast';
+import type { ApiError } from '@/types/error';
+
+interface VerifyEmailError extends ApiError {
+  field?: string;
+}
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -12,21 +18,20 @@ export default function VerifyEmailPage() {
   const email = searchParams.get('email');
   
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState<VerifyEmailError | null>(null);
 
-  const handleResendEmail = async () => {
-    if (!email) return;
-    
+  const handleResendVerification = async () => {
     setLoading(true);
-    setError('');
-    setSuccess('');
-
     try {
       await AuthService.resendVerification(email);
-      setSuccess('Đã gửi lại email xác thực. Vui lòng kiểm tra hộp thư của bạn.');
-    } catch (error: any) {
-      setError(error.message || 'Đã có lỗi xảy ra khi gửi lại email xác thực');
+      toast.success('Email xác thực đã được gửi lại');
+    } catch (err: unknown) {
+      const error: VerifyEmailError = {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        code: 'VERIFY_EMAIL_ERROR'
+      };
+      setError(error);
+      toast.error(error.message);
     } finally {
       setLoading(false);
     }
@@ -47,19 +52,13 @@ export default function VerifyEmailPage() {
 
           {error && (
             <div className="bg-red-100 text-red-700 p-3 rounded">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="bg-green-100 text-green-700 p-3 rounded">
-              {success}
+              {error.message}
             </div>
           )}
 
           <div className="flex flex-col space-y-4">
             <Button
-              onClick={handleResendEmail}
+              onClick={handleResendVerification}
               loading={loading}
               disabled={loading || !email}
             >
