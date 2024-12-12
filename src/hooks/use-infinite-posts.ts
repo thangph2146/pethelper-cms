@@ -17,7 +17,7 @@ export function useInfinitePosts({ filters }: UseInfinitePostsOptions = {}) {
     queryKey: ['posts', filters] as const,
     queryFn: async ({ pageParam = 1 }) => {
       const response = await PostService.getAllPosts(Number(pageParam), filters);
-      return response;
+      return response.data;
     },  
     getNextPageParam: (lastPage) => {
       if (!lastPage.pagination.totalPages) return undefined;
