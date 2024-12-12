@@ -5,7 +5,7 @@ import { Spinner } from './spinner';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean;
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'link';
   size?: 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
   children: React.ReactNode;
@@ -46,7 +46,7 @@ export function Button({
       disabled={isDisabled}
       className={`
         ${baseStyles}
-        ${variants[variant]}
+        ${variants[variant as keyof typeof variants]}
         ${sizes[size]}
         ${width}
         ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}

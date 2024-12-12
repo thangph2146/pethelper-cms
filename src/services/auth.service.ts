@@ -67,16 +67,6 @@ export class AuthService {
     }
   }
 
-  static async resetPassword(email: string): Promise<void> {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      if (error) throw error;
-    } catch (error: unknown) {
-      const authError = error as AuthError;
-      throw new Error(authError.message || 'Gửi email reset password thất bại');
-    }
-  }
-
   static async updatePassword(newPassword: string): Promise<void> {
     try {
       const { error } = await supabase.auth.updateUser({
@@ -115,6 +105,26 @@ export class AuthService {
     } catch (error: unknown) {
       const authError = error as AuthError;
       throw new Error(authError.message || 'Gửi email khôi phục mật khẩu thất bại');
+    }
+  }
+
+  static async resetPassword(password: string, token: string): Promise<void> {
+    try {
+      const response = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ password, token }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Lỗi khi đặt lại mật khẩu");
+      }
+
+      return response.json();
+    } catch (error) {
+      throw new Error("Có lỗi xảy ra khi đặt lại mật khẩu");
     }
   }
 }
