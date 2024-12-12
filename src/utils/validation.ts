@@ -35,3 +35,24 @@ export const validateRegisterData = {
     }
   }
 }; 
+
+export const validateLoginData = {
+  email: (email: string) => {
+    if (!email) {
+      throw new ValidationError('Vui lòng nhập email');
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw new ValidationError('Email không hợp lệ');
+    }
+  },
+
+  password: (password: string) => {
+    if (!password) {
+      throw new ValidationError('Vui lòng nhập mật khẩu');
+    }
+    if (password.length < 6) {
+      throw new ValidationError('Mật khẩu phải có ít nhất 6 ký tự');
+    }
+  }
+};

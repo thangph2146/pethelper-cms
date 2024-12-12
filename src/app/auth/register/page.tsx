@@ -40,6 +40,9 @@ export default function RegisterPage() {
         case 'password':
           validateRegisterData.password(formData.password);
           break;
+        case 'phone':
+          validateRegisterData.phone(formData.phone);
+          break;
         case 'confirmPassword':
           if (formData.password !== formData.confirmPassword) {
             throw new Error('Mật khẩu xác nhận không khớp');
@@ -63,7 +66,7 @@ export default function RegisterPage() {
   };
 
   const validateForm = () => {
-    const fields: (keyof typeof formData)[] = ['name', 'email', 'password', 'confirmPassword'];
+    const fields: (keyof typeof formData)[] = ['name', 'email', 'password', 'confirmPassword', 'phone'];
     const validations = fields.map(field => validateField(field));
     return validations.every(isValid => isValid);
   };

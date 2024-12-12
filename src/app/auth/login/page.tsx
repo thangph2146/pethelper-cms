@@ -1,159 +1,163 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { authAPI } from '@/lib/authAPI';
+import React, { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { validateLoginData } from '@/utils/validation';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
+
+interface FormErrors {
+  email?: string;
+  password?: string;
+}
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
+    password: ''
   });
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // Kiểm tra token hợp lệ trước khi chuyển hướng
-    const checkAuth = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          // Thêm API để verify token
-          await authAPI.verifyToken();
-          router.push('/dashboard');
-        } catch (err) {
-          // Nếu token không hợp lệ, xóa khỏi localStorage
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-        }
+  const validateField = (field: keyof typeof formData) => {
+    try {
+      switch (field) {
+        case 'email':
+          validateLoginData.email(formData.email);
+          break;
+        case 'password':
+          validateLoginData.password(formData.password);
+          break;
       }
-    };
-    checkAuth();
-  }, [router]);
-
- 
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+      return true;
+    } catch (error: any) {
+      setErrors(prev => ({ ...prev, [field]: error.message }));
+      return false;
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (value) validateField(name as keyof typeof formData);
+  };
+
+  const validateForm = () => {
+    const fields: (keyof typeof formData)[] = ['email', 'password'];
+    const validations = fields.map(field => validateField(field));
+    return validations.every(isValid => isValid);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError('Email không hợp lệ');
-      return;
-    }
-
-    // Validate password length
-    if (formData.password.length < 6) {
-      setError('Mật khẩu phải có ít nhất 6 ký tự');
-      return;
-    }
-
-    setError('');
+    setSubmitError('');
     setLoading(true);
 
     try {
-      const response = await authAPI.login(formData.email, formData.password);
-      
-      // Lưu token và thông tin user vào localStorage
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      
-      // Thêm một chút delay trước khi chuyển hướng
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 500);
-      
-    } catch (err: any) {
-      console.error('Login error:', err);
-      if (err.response?.status === 429) {
-        setError('Quá nhiều lần đăng nhập thất bại. Vui lòng thử lại sau.');
-      } else {
-        setError(err.response?.data?.error );
+      if (!validateForm()) {
+        setLoading(false);
+        return;
       }
+
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Có lỗi xảy ra khi đăng nhập');
+      }
+
+      if (data.success) {
+        router.push('/'); // Chuyển về trang chủ sau khi đăng nhập
+      }
+    } catch (error: any) {
+      setSubmitError(error.message || 'Có lỗi xảy ra khi đăng nhập');
     } finally {
       setLoading(false);
     }
   };
 
+  // Hiển thị thông báo đăng ký thành công nếu có
+  const registeredMessage = searchParams.get('registered') ? (
+    <div className="bg-green-100 text-green-700 p-3 rounded mb-4">
+      Đăng ký thành công! Vui lòng đăng nhập.
+    </div>
+  ) : null;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Đăng nhập
-          </h2>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-            <div className="rounded-md bg-red-50 p-4">
-              <div className="text-sm text-red-700">{error}</div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <Card className="max-w-md w-full p-6">
+        <CardHeader className="p-0">
+          <h1 className="text-2xl font-bold text-center">Đăng nhập</h1>
+        </CardHeader>
+
+        <CardContent className="p-0 mt-6">
+          {registeredMessage}
+          
+          {submitError && (
+            <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
+              {submitError}
             </div>
           )}
-          <div className="rounded-md shadow-sm -space-y-px">
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="email" className="sr-only">
-                Email
-              </label>
-              <input
-                id="email"
+              <label className="block text-sm font-medium mb-1">Email</label>
+              <Input
                 type="email"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                autoComplete="username"
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="sr-only">
-                Mật khẩu
-              </label>
-              <input
-                id="password"
+                className={errors.email ? 'border-red-500' : ''}
                 required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Mật khẩu"
-                type="password"
-                value={formData.password}
-                name="password"
-                onChange={handleChange}
-                autoComplete="current-password"
               />
+              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
             </div>
-          </div>
 
-          <div>
-            <button
+            <div>
+              <label className="block text-sm font-medium mb-1">Mật khẩu</label>
+              <Input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className={errors.password ? 'border-red-500' : ''}
+                required
+              />
+              {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+            </div>
+
+            <Button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded"
             >
               {loading ? 'Đang xử lý...' : 'Đăng nhập'}
-            </button>
-          </div>
+            </Button>
+          </form>
+        </CardContent>
 
-          <div className="text-sm text-center">
-            <Link
-              href="/auth/register"
-              className="font-medium text-indigo-600 hover:text-indigo-500"
-            >
-              Chưa có tài khoản? Đăng ký ngay
+        <CardFooter className="p-0 mt-4 justify-center">
+          <p>
+            Chưa có tài khoản?{' '}
+            <Link href="/auth/register" className="text-blue-600 hover:underline">
+              Đăng ký
             </Link>
-          </div>
-        </form>
-      </div>
+          </p>
+        </CardFooter>
+      </Card>
     </div>
   );
 } 
