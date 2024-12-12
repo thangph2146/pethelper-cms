@@ -11,8 +11,11 @@ const publicRoutes = [
 
 export async function middleware(request: NextRequest) {
   try {
-    // Khởi tạo Supabase client
-    const supabase = createMiddlewareClient({ req: request, res: NextResponse as unknown as NextResponse<unknown> });
+    // Khởi tạo response
+    const res = NextResponse.next()
+    
+    // Khởi tạo Supabase client với request và response
+    const supabase = createMiddlewareClient({ req: request, res })
 
     // Kiểm tra session
     const {
@@ -32,7 +35,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/login', request.url));
     }
 
-    return NextResponse.next();
+    return res;
   } catch (error) {
     // Log lỗi và redirect về trang login
     console.error('Middleware error:', error);

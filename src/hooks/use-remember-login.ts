@@ -1,35 +1,26 @@
 'use client';
 
-export function useRememberLogin() {
-  const saveLoginInfo = (email: string) => {
-    try {
-      localStorage.setItem('savedEmail', email);
-    } catch (error) {
-      console.error('Lỗi khi lưu thông tin đăng nhập:', error);
-    }
-  };
+export const getSavedEmail = () => {
+  if (typeof window === 'undefined') return '';
+  return localStorage.getItem('savedEmail') || '';
+};
 
-  const getSavedEmail = (): string => {
-    try {
-      return localStorage.getItem('savedEmail') || '';
-    } catch (error) {
-      console.error('Lỗi khi lấy thông tin đăng nhập:', error);
-      return '';
-    }
-  };
+export const saveEmail = (email: string) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('savedEmail', email);
+};
 
-  const clearLoginInfo = () => {
-    try {
-      localStorage.removeItem('savedEmail');
-      localStorage.removeItem('rememberMe');
-    } catch (error) {
-      console.error('Lỗi khi xóa thông tin đăng nhập:', error);
-    }
-  };
+export const clearSavedEmail = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('savedEmail');
+};
 
-  return {
-    saveLoginInfo,
-    getSavedEmail,
-    clearLoginInfo
-  };
-} 
+export const setRememberMe = (value: boolean) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('rememberMe', value ? 'true' : 'false');
+};
+
+export const getRememberMe = () => {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem('rememberMe') === 'true';
+}; 

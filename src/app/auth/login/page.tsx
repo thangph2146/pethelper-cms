@@ -1,27 +1,34 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardHeader, CardContent, CardFooter, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/form/form-field';
 import { useAuthContext } from '@/providers/auth-provider';
-import { useRememberLogin } from '@/hooks/use-remember-login';
+import { getSavedEmail, saveEmail, setRememberMe, getRememberMe, clearSavedEmail } from '@/hooks/use-remember-login';
 import type { LoginFormState, LoginFormErrors } from '@/types/form';
 import { toast } from 'react-hot-toast';
 
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuthContext();
-  const { saveLoginInfo, getSavedEmail } = useRememberLogin();
+  const { signIn } = useAuthContext();
 
-  const [formData, setFormData] = useState<LoginFormState>({
-    email: getSavedEmail(),
+  const [formData, setFormData] = useState(() => ({
+    email: '',
     password: '',
-    rememberMe: !!localStorage.getItem('rememberMe')
-  });
+    rememberMe: false
+  }));
+
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      email: getSavedEmail(),
+      rememberMe: getRememberMe()
+    }));
+  }, []);
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<LoginFormErrors>({});
@@ -61,14 +68,14 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      await login(formData.email, formData.password);
+      await signIn(formData.email, formData.password);
 
       if (formData.rememberMe) {
-        localStorage.setItem('rememberMe', 'true');
-        saveLoginInfo(formData.email);
+        setRememberMe(true);
+        saveEmail(formData.email);
       } else {
-        localStorage.removeItem('rememberMe');
-        localStorage.removeItem('savedEmail');
+        setRememberMe(false);
+        clearSavedEmail();
       }
 
       router.push('/');
