@@ -1,50 +1,42 @@
 import { NextResponse } from 'next/server';
-import { connectToMongoDB } from '@/lib/mongodb';
-import { User } from '@/backend/models/User';
+import { AuthService } from '@/services/auth.service';
+import { UserServiceError } from '@/services/user.service';
+import type { RegisterData, AuthResponse } from '@/types/auth';
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const { name, email, password, phone } = await req.json();
+    const body = await request.json();
+    
+    const registerData: RegisterData = {
+      name: body.name,
+      email: body.email,
+      password: body.password
+    };
 
-    // Kiểm tra dữ liệu đầu vào
-    if (!name || !email || !password) {
+    if (body.phone) {
+      registerData.phone = body.phone;
+    }
+
+    const response = await AuthService.registerServer(registerData);
+
+    return NextResponse.json(response);
+  } catch (error: any) {
+    if (error instanceof UserServiceError) {
       return NextResponse.json(
-        { message: 'Vui lòng điền đầy đủ thông tin' },
-        { status: 400 }
+        { 
+          success: false, 
+          message: error.message 
+        },
+        { status: error.status }
       );
     }
 
-    // Kết nối database
-    await connectToMongoDB();
-
-    // Kiểm tra email đã tồn tại
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return NextResponse.json(
-        { message: 'Email đã được sử dụng' },
-        { status: 400 }
-      );
-    }
-
-    // Tạo user mới - password sẽ được hash tự động bởi middleware
-    await User.create({
-      name,
-      email,
-      password,
-      phone,
-      status: 'active',
-      role: 'user'
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: 'Đăng ký thành công',
-    });
-
-  } catch (error) {
     console.error('Register error:', error);
     return NextResponse.json(
-      { message: 'Có lỗi xảy ra khi đăng ký' },
+      { 
+        success: false, 
+        message: 'Có lỗi xảy ra khi đăng ký' 
+      },
       { status: 500 }
     );
   }

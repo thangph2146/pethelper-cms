@@ -1,18 +1,22 @@
+export type UserRole = 'user' | 'admin';
+export type UserStatus = 'active' | 'inactive' | 'blocked';
+
 export interface IUser {
   _id: string;
   name: string;
   email: string;
-  role: 'user' | 'admin';
-  avatar?: string;
+  password?: string;
   phone?: string;
-  location?: string;
-  blocked?: boolean;
-  createdAt: string;
-  updatedAt: string;
+  status: UserStatus;
+  role: UserRole;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
+export type SafeUser = Omit<IUser, 'password'>;
+
 export interface UserResponse {
-  users: IUser[];
+  users: SafeUser[];
   pagination: {
     page: number;
     limit: number;

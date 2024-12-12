@@ -8,7 +8,12 @@ const axiosInstance = axios.create({
 });
 
 // Danh sách các route không cần xác thực
-const publicRoutes = ['/api/posts', '/api/auth/login', '/api/auth/register', '/api/auth/verify'];
+const publicRoutes = ['/api/posts',
+   '/api/auth/login', 
+   '/api/auth/register', 
+   '/api/auth/verify', 
+   '/api/auth/session'
+];
 
 // Thêm interceptor để xử lý token
 axiosInstance.interceptors.request.use((config) => {

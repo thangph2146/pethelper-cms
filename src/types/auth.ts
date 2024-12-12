@@ -1,33 +1,16 @@
-import type { IUser } from './index';
+import type { SafeUser } from './user';
 
-// Type cho đăng ký
-export interface RegisterDTO {
+export interface RegisterData {
   name: string;
   email: string;
   password: string;
-  confirmPassword: string;
+  phone?: string;
 }
 
-// Type cho đăng nhập
-export interface LoginDTO {
-  email: string;
-  password: string;
-}
+export type CreateUserResponse = SafeUser;
 
-// Type cho response auth
 export interface AuthResponse {
-  user: IUser;
-  token: string;
-}
-
-// Type cho session
-export interface Session {
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    image?: string;
-    role: 'user' | 'admin';
-  };
-  expires: string;
+  success: boolean;
+  message: string;
+  user: CreateUserResponse;
 } 

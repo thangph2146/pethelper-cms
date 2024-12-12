@@ -18,6 +18,10 @@ const publicRoutes = [
   {
     path: '/api/auth/verify',
     methods: ['POST']  // Chỉ cho phép POST request
+  },
+  {
+    path: '/api/auth/session',
+    methods: ['GET']  // Chỉ cho phép GET request
   }
 ];
 

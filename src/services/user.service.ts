@@ -1,42 +1,60 @@
-import axios from 'axios';
+import { connectToMongoDB } from '@/lib/mongodb';
+import { User } from '@/backend/models/User';
+import { hash } from 'bcryptjs';
+import type { RegisterData, CreateUserResponse } from '@/types/auth';
+import type { UserStatus, UserRole } from '@/types/user';
+import { validateRegisterData, ValidationError } from '@/utils/validation';
 
-const axiosInstance = axios.create({
-  baseURL: '/api',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-interface UpdateUserData {
-  name?: string;
-  image?: string;
-  phone?: string;
-  address?: string;
+export class UserServiceError extends Error {
+  constructor(message: string, public status: number = 400) {
+    super(message);
+    this.name = 'UserServiceError';
+  }
 }
 
 export const UserService = {
-  async updateProfile(data: UpdateUserData) {
-    const response = await axiosInstance.patch('/users/profile', data);
-    return response.data;
-  },
+  async createUser(data: RegisterData): Promise<CreateUserResponse> {
+    try {
+      await connectToMongoDB();
 
-  async getSavedPosts() {
-    const response = await axiosInstance.get('/users/saved-posts');
-    return response.data;
-  },
+      // Validate dữ liệu
+      if (!data.email || !data.password || !data.name) {
+        throw new UserServiceError('Vui lòng điền đầy đủ thông tin');
+      }
 
-  async savePost(postId: string) {
-    const response = await axiosInstance.post(`/users/saved-posts/${postId}`);
-    return response.data;
-  },
+      // Validate các trường
+      validateRegisterData.password(data.password);
+      validateRegisterData.name(data.name);
+      validateRegisterData.email(data.email);
 
-  async unsavePost(postId: string) {
-    const response = await axiosInstance.delete(`/users/saved-posts/${postId}`);
-    return response.data;
-  },
+      // Kiểm tra email đã tồn tại
+      const existingUser = await User.findOne({ email: data.email });
+      if (existingUser) {
+        throw new UserServiceError('Email đã được sử dụng');
+      }
 
-  async getUserComments() {
-    const response = await axiosInstance.get('/users/comments');
-    return response.data;
+      // Hash password
+      const hashedPassword = await hash(data.password, 12);
+
+      // Tạo user mới
+      const user = await User.create({
+        ...data,
+        password: hashedPassword,
+        status: 'active' as UserStatus,
+        role: 'user' as UserRole
+      });
+
+      // Không trả về password trong response
+      const userObject = user.toObject();
+      delete userObject.password;
+
+      return userObject as CreateUserResponse;
+    } catch (error) {
+      if (error instanceof UserServiceError || error instanceof ValidationError) {
+        throw error;
+      }
+      console.error('Create user error:', error);
+      throw new UserServiceError('Có lỗi xảy ra khi tạo tài khoản', 500);
+    }
   }
-}; 
+} 
