@@ -7,9 +7,9 @@ export interface LoginData {
 }
 
 export interface RegisterData {
+  name: string;
   email: string;
   password: string;
-  name: string;
   phone?: string;
 }
 
@@ -23,6 +23,12 @@ export interface LoginResponse {
 export interface RegisterResponse {
   success: boolean;
   message: string;
+  user?: {
+    id: string;
+    email: string;
+    name: string;
+    phone?: string;
+  };
 }
 
 export interface AuthResponse {

@@ -5,7 +5,6 @@ import { ValidationError } from '@/types/error';
 import { errorHandler } from '@/middleware/error-handler';
 import { tokenUtils } from '@/utils/token';
 import type { LoginData } from '@/types/auth';
-import { PrismaClientInitializationError } from '@prisma/client/runtime/library';
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_TIME = 15 * 60 * 1000; // 15 phút
@@ -23,6 +22,7 @@ export async function POST(request: Request) {
       
       await Promise.race([connectionPromise, timeoutPromise]);
       prismaConnection = true;
+      
       console.log('Kết nối database thành công');
       
     } catch (error) {

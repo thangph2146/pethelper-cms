@@ -1,9 +1,13 @@
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { LoginData, LoginResponse, RegisterData, ValidateSessionResponse } from '@/types/auth';
 import { validateLoginData, validateRegisterData } from '@/utils/validation';
 import axios from '@/utils/axios';
 import { ValidationError } from '@/types/error';
 import { RegisterResponse } from '@/types/auth';
+
 export class AuthService {
+  private static supabase = createClientComponentClient();
+
   static async login(loginData: LoginData): Promise<LoginResponse> {
     try {
       // Validate dữ liệu đầu vào
@@ -114,6 +118,7 @@ export class AuthService {
         validateRegisterData.phone(registerData.phone);
       }
 
+      // Gọi API để đăng ký với Supabase
       const { data } = await axios.post<RegisterResponse>('/api/auth/register', registerData);
 
       if (!data.success) {
@@ -123,11 +128,10 @@ export class AuthService {
       if (error.response) {
         switch (error.response.status) {
           case 409:
-            throw new ValidationError('Email đã được sử dụng', 409, 'email');
+            throw new ValidationError('Email đã được sử dụng', 'email');
           default:
             throw new ValidationError(
               error.response.data.message || 'Có lỗi xảy ra khi đăng ký',
-              error.response.status,
               'form'
             );
         }

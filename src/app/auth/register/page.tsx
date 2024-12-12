@@ -79,7 +79,7 @@ export default function RegisterPage() {
       await AuthService.register(registerData);
       
       // Chuyển đến trang login với thông báo đăng ký thành công
-      router.push('/auth/login?registered=true');
+      // router.push('/auth/login?registered=true');
       
     } catch (error) {
       if (error instanceof ValidationError) {

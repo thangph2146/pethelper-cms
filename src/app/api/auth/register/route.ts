@@ -1,73 +1,60 @@
 import { NextResponse } from 'next/server';
-import { hash } from 'bcrypt';
-import { prisma } from '@/lib/prisma';
-import { ValidationError } from '@/types/error';
-import { errorHandler } from '@/middleware/error-handler';
+import { supabase } from '@/lib/supabase';
 import { validateRegisterData } from '@/utils/validation';
-import type { RegisterData } from '@/types/auth';
-
-const SALT_ROUNDS = 10;
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    
-    const registerData: RegisterData = {
-      email: body.email,
-      password: body.password,
-      name: body.name,
-      phone: body.phone
-    };
+    const data = await request.json();
 
-    // Validate dữ liệu đầu vào
-    validateRegisterData.email(registerData.email);
-    validateRegisterData.password(registerData.password);
-    validateRegisterData.name(registerData.name);
-    if (registerData.phone) {
-      validateRegisterData.phone(registerData.phone);
+    // Validate dữ liệu
+    validateRegisterData.name(data.name);
+    validateRegisterData.email(data.email);
+    validateRegisterData.password(data.password);
+    if (data.phone) {
+      validateRegisterData.phone(data.phone);
     }
 
-    // Kiểm tra email đã tồn tại
-    const existingUser = await prisma.user.findUnique({
-      where: { email: registerData.email }
-    });
-
-    if (existingUser) {
-      throw new ValidationError('Email đã được sử dụng', 409, 'email');
-    }
-
-    // Hash password
-    const hashedPassword = await hash(registerData.password, SALT_ROUNDS);
-
-    // Tạo user mới
-    const user = await prisma.user.create({
-      data: {
-        email: registerData.email,
-        password: hashedPassword,
-        name: registerData.name,
-        phone: registerData.phone,
-        status: 'active',
-        role: 'user',
-        loginAttempts: 0
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        phone: true,
-        role: true,
-        status: true,
-        createdAt: true
+    // Đăng ký với Supabase
+    const { data: supabaseData, error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        data: {
+          name: data.name,
+          phone: data.phone
+        }
       }
     });
 
+    if (error) {
+      return NextResponse.json(
+        { success: false, message: error.message },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Đăng ký thành công',
-      user
+      message: 'Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.',
+      user: {
+        id: supabaseData.user?.id,
+        email: data.email,
+        name: data.name,
+        phone: data.phone
+      }
     });
 
-  } catch (error) {
-    return errorHandler(error);
+  } catch (error: any) {
+    if (error.name === 'ValidationError') {
+      return NextResponse.json(
+        { success: false, message: error.message },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { success: false, message: 'Có lỗi xảy ra khi đăng ký' },
+      { status: 500 }
+    );
   }
 } 
