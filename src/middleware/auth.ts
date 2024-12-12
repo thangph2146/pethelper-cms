@@ -15,7 +15,6 @@ export async function validateSession(request: NextRequest): Promise<ValidateRes
     const res = NextResponse.next();
     const supabase = createMiddlewareClient({ req: request, res });
 
-    // Kiểm tra session
     const { data: { session }, error } = await supabase.auth.getSession();
 
     if (error) {
@@ -27,13 +26,25 @@ export async function validateSession(request: NextRequest): Promise<ValidateRes
     }
 
     // Kiểm tra xác thực email nếu cần
-    if (!session.user.email_verified) {
+    if (!session.user.email_confirmed_at) {
       throw new AuthorizationError('Vui lòng xác thực email để tiếp tục');
     }
 
+    // Thêm các trường bắt buộc cho SupabaseUser
+    const enhancedUser = {
+      ...session.user,
+      email_verified: session.user.email_confirmed_at ? true : false,
+    };
+
+    // Tạo SupabaseSession với user đã được enhance
+    const enhancedSession = {
+      ...session,
+      user: enhancedUser,
+    };
+
     return {
-      session,
-      user: session.user,
+      session: enhancedSession as SupabaseSession,
+      user: enhancedUser as SupabaseUser,
       response: res
     };
 

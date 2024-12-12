@@ -65,7 +65,7 @@ export default function ProfilePage() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-red-500">Lỗi: {error}</div>
+        <div className="text-red-500">Lỗi: {error.message}</div>
       </div>
     );
   }

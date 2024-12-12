@@ -66,7 +66,19 @@ export class AuthService {
       throw new Error(authError.message || 'Đăng xuất thất bại');
     }
   }
-
+  static async verifyEmail(token: string): Promise<void> {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        token,
+        type: 'signup',
+        token_hash: token
+      });
+      if (error) throw error;
+    } catch (error: unknown) {
+      const authError = error as AuthError;
+      throw new Error(authError.message || 'Xác thực email thất bại');
+    }
+  }
   static async updatePassword(newPassword: string): Promise<void> {
     try {
       const { error } = await supabase.auth.updateUser({
@@ -97,7 +109,15 @@ export class AuthService {
       throw new Error(authError.message || 'Lấy thông tin session thất bại');
     }
   }
-
+  static async resendVerificationEmail(email: string): Promise<void> {
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email });
+      if (error) throw error;
+    } catch (error: unknown) {
+      const authError = error as AuthError;
+      throw new Error(authError.message || 'Gửi email xác thực thất bại');
+    }
+  }
   static async forgotPassword(email: string): Promise<void> {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email);

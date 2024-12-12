@@ -17,7 +17,9 @@ export interface SafeUser {
   id: string;
   email: string;
   name?: string | null;
-  image?: string | null;
+  avatar?: string | null;
+  phone?: string | null;
+  address?: string | null;
   role: string;
   status: string;
   lastLoginAt?: Date | null;

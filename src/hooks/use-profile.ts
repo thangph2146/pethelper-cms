@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ProfileService } from '@/services/profile.service';
 import { toast } from 'react-hot-toast';
 import type { ApiError } from '@/types/api';
+import type { SafeUser } from '@/types/user';
 
 interface ProfileData {
   name?: string;
@@ -16,6 +17,8 @@ interface PasswordData {
 
 export function useProfile() {
   const [loading, setLoading] = useState(false);
+  const [profile, setProfile] = useState<SafeUser | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
 
   const updateProfile = async (data: ProfileData) => {
     try {
@@ -58,6 +61,8 @@ export function useProfile() {
 
   return {
     loading,
+    profile,
+    error,
     updateProfile,
     changePassword,
     deleteAccount

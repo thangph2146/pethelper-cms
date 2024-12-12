@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { PostService } from '@/services/post.service';
-import type { IPost } from '@backend/models/Post';
+import { GetPostByIdResponse } from '@/types/post';
 
 export function usePost(id: string) {
-  return useQuery<IPost>({
+  return useQuery<GetPostByIdResponse>({
     queryKey: ['post', id],
     queryFn: async () => {
-      const response = await PostService.getPost(id);
-      return response.data;
+      const response = await PostService.getPostById(id);
+      return response.data as unknown as GetPostByIdResponse;
     },
   });
 }

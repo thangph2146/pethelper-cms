@@ -15,25 +15,28 @@ interface ApiResponse<T> {
 }
 
 export const NotificationService = {
-  async getNotifications(): Promise<INotification[]> {
+  async getNotifications(): Promise<ApiResponse<INotification[]>> {
     const response = await axios.get<ApiResponse<INotification[]>>('/api/notifications');
-    return response.data.data;
+    return response.data;
   },
 
-  async createNotification(data: NotificationInput): Promise<INotification> {
+  async createNotification(data: NotificationInput): Promise<ApiResponse<INotification>> {
     const response = await axios.post<ApiResponse<INotification>>('/api/notifications', data);
-    return response.data.data;
+    return response.data;
   },
 
-  async markAsRead(id: string): Promise<void> {
-    await axios.patch(`/api/notifications/${id}/read`);
+  async markAsRead(id: string): Promise<ApiResponse<void>> {
+    const response = await axios.patch<ApiResponse<void>>(`/api/notifications/${id}/read`);
+    return response.data;
   },
 
-  async markAllAsRead(): Promise<void> {
-    await axios.patch('/api/notifications/read-all');
+  async markAllAsRead(): Promise<ApiResponse<void>> {
+    const response = await axios.patch<ApiResponse<void>>('/api/notifications/read-all');
+    return response.data;
   },
 
-  async deleteNotification(id: string): Promise<void> {
-    await axios.delete(`/api/notifications/${id}`);
+  async deleteNotification(id: string): Promise<ApiResponse<void> | void> {
+    const response = await axios.delete<ApiResponse<void>>(`/api/notifications/${id}`);
+    return response.data;
   }
 }; 

@@ -9,7 +9,7 @@ export const useComments = (postId: string) => {
     queryKey: ['comments', postId],
     queryFn: async () => {
       const response = await CommentService.getComments(postId);
-      return response.data;
+      return response;
     },
   });
 

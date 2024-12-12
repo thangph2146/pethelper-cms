@@ -15,7 +15,7 @@ export const useNotifications = () => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const response = await NotificationService.getNotifications() as NotificationResponse;
+      const response = await NotificationService.getNotifications() as unknown as NotificationResponse;
       setNotifications(response.notifications);
       setUnreadCount(response.notifications.filter(n => !n.isRead).length);
     } catch (err) {

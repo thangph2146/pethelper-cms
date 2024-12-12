@@ -91,6 +91,13 @@ export interface PostStats {
   comments: number;
   shares: number;
 }
+export interface GetPostByIdParams {
+  id: string;
+}
+
+export interface GetPostByIdResponse {
+  data: IPost;
+}
 
 export const POST_TYPE_LABELS: Record<PostType | 'all', string> = {
   all: 'Tất cả',

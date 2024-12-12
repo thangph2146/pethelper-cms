@@ -15,7 +15,7 @@ export interface ApiErrorResponse {
   };
 }
 
-export interface ApiSuccessResponse<T> extends ApiResponse {
+export interface ApiSuccessResponse<T> extends ApiResponse<T> {
   success: true;
   data: T;
   message?: string;

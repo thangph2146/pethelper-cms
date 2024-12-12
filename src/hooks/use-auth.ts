@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthService } from '@/services/auth.service';
+import { SafeUser } from '@/types/user';
 
 interface AuthError {
   message: string;
@@ -16,7 +17,7 @@ interface User {
 }
 
 interface Session {
-  user: User | null;
+  user: SafeUser | null;
   session: {
     access_token: string;
     refresh_token: string;
@@ -43,8 +44,12 @@ export function useAuth() {
     try {
       const data = await AuthService.getSession();
       setSession({
-        user: data.user,
-        session: data.session,
+        user: data.user as SafeUser | null,
+        session: data.session as {
+          access_token: string;
+          refresh_token: string;
+          expires_at: number;
+        },
         loading: false,
         error: null
       });
@@ -61,7 +66,7 @@ export function useAuth() {
 
   const login = async (email: string, password: string) => {
     try {
-      const data = await AuthService.login({ email, password });
+      const data = await AuthService.signIn(email, password);
       await checkSession();
       return data;
     } catch (error: unknown) {
@@ -72,7 +77,7 @@ export function useAuth() {
 
   const logout = async () => {
     try {
-      await AuthService.logout();
+      await AuthService.signOut();
       setSession({
         user: null,
         session: null,

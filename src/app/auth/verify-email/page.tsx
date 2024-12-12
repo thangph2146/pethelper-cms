@@ -21,9 +21,13 @@ export default function VerifyEmailPage() {
   const [error, setError] = useState<VerifyEmailError | null>(null);
 
   const handleResendVerification = async () => {
+    if (!email) {
+      setError({ message: 'Email không được để trống', code: 'VERIFY_EMAIL_ERROR' });
+      return;
+    }
     setLoading(true);
     try {
-      await AuthService.resendVerification(email);
+      await AuthService.resendVerificationEmail(email);
       toast.success('Email xác thực đã được gửi lại');
     } catch (err: unknown) {
       const error: VerifyEmailError = {
