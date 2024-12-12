@@ -77,4 +77,3 @@ if (typeof window === 'undefined') {
 }
 
 export { User };
-export type { IUser }; 

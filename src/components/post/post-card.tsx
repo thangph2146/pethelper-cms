@@ -73,7 +73,6 @@ export function PostCard({ post, onLike, onUnlike }: PostCardProps) {
       <CardFooter className="flex justify-between">
         <div className="flex gap-2">
           <Button 
-            variant="ghost" 
             size="sm" 
             className="gap-2" 
             onClick={isLiked ? onUnlike : onLike}
@@ -81,7 +80,7 @@ export function PostCard({ post, onLike, onUnlike }: PostCardProps) {
             <Heart className={`w-4 h-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
             <span>{post.likes?.length || 0}</span>
           </Button>
-          <Button variant="ghost" size="sm" className="gap-2">
+          <Button size="sm" className="gap-2">
             <MessageCircle className="w-4 h-4" />
             <span>{post.comments?.length || 0}</span>
           </Button>
