@@ -8,6 +8,8 @@ const publicRoutes = [
   '/auth/register',
   '/auth/forgot-password',
   '/auth/reset-password',
+  '/auth/callback',
+  '/auth/error',
   '/',
   '/posts'
 ];
@@ -18,8 +20,9 @@ const protectedRoutes = [
   '/posts/create',
   '/posts/my-posts',
   '/api/profile',
-  '/api/auth/change-password',
-  '/api/posts/create'
+  '/api/posts/create',
+  '/api/posts/my-posts',
+  '/api/auth/change-password'
 ];
 
 export async function middleware(request: NextRequest) {
@@ -50,6 +53,10 @@ export async function middleware(request: NextRequest) {
 
   // Nếu đã đăng nhập và truy cập trang auth
   if (session && pathname.startsWith('/auth')) {
+    // Cho phép truy cập callback và error page
+    if (pathname.startsWith('/auth/callback') || pathname.startsWith('/auth/error')) {
+      return res;
+    }
     return NextResponse.redirect(new URL('/', request.url));
   }
 
@@ -69,7 +76,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
+     * - api routes không cần bảo vệ
      */
-    '/((?!_next/static|_next/image|favicon.ico|public/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|public/|api/public/).*)',
   ],
 }; 

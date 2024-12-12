@@ -56,8 +56,11 @@ export function Button({
     >
       {loading ? (
         <>
-          <Spinner className="w-4 h-4 mr-2" />
-          Đang xử lý...
+          <Spinner 
+            size="sm" 
+            light={variant === 'primary'} 
+          />
+          <span className="ml-2">Đang xử lý...</span>
         </>
       ) : (
         children
