@@ -205,3 +205,37 @@ export interface Post {
   images?: string[];
   viewCount?: number;
 }
+
+export interface PostRenderProps {
+  header: {
+    author: Post['author'];
+    date: string;
+    status: Post['status'];
+    statusColor: string;
+    isAuthor: boolean;
+    onMenuAction: (action: string) => void;
+  };
+  content: {
+    title: string;
+    content: string;
+    images?: string[];
+    showContent: boolean;
+    toggleContent: () => void;
+    contentRef: RefObject<HTMLDivElement>;
+    onImageClick: (image: string) => void;
+  };
+  footer: {
+    stats: PostStats;
+    onLike: (e: React.MouseEvent) => Promise<void>;
+    onComment: () => void;
+    onSave: (e: React.MouseEvent) => Promise<void>;
+    isLikeLoading: boolean;
+    isSaving: boolean;
+  };
+  quickActions: {
+    isStarred: boolean;
+    onQuickView: (e: React.MouseEvent) => void;
+    onStar: (e: React.MouseEvent) => Promise<void>;
+    isStarring: boolean;
+  };
+}

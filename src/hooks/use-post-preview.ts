@@ -2,7 +2,16 @@ import { useState, useRef, useEffect } from 'react';
 import { useReadPosts } from '@/hooks/use-read-posts';
 import type { Post } from '@/types/post';
 
-export const usePostPreview = (post: Post) => {
+export interface UsePostPreview {
+  showPreview: boolean;
+  setShowPreview: (show: boolean) => void;
+  selectedImage: string | null;
+  setSelectedImage: (image: string | null) => void;
+  handleQuickView: (e: React.MouseEvent) => void;
+  handleImageClick: (image: string) => void;
+}
+
+export const usePostPreview = (post: Post): UsePostPreview => {
   const { isRead, markAsRead } = useReadPosts();
   const [showPreview, setShowPreview] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);

@@ -1,7 +1,22 @@
 import { useState } from 'react';
 import type { Post } from '@/types/post';
 
-export const usePostDialogs = (post: Post) => {
+export interface UsePostDialogs {
+  showDeleteAlert: boolean;
+  setShowDeleteAlert: (show: boolean) => void;
+  showReportDialog: boolean;
+  setShowReportDialog: (show: boolean) => void;
+  showComments: boolean;
+  setShowComments: (show: boolean) => void;
+  showShareDialog: boolean;
+  setShowShareDialog: (show: boolean) => void;
+  openDeleteAlert: () => void;
+  openReportDialog: () => void;
+  openComments: () => void;
+  openShareDialog: () => void;
+}
+
+export const usePostDialogs = (post: Post): UsePostDialogs => {
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
   const [showComments, setShowComments] = useState(false);

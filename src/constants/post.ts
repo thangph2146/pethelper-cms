@@ -53,4 +53,21 @@ export const ANIMAL_TYPE_EMOJI = {
   [ANIMAL_TYPE.DOG]: '🐕',
   [ANIMAL_TYPE.CAT]: '🐈',
   [ANIMAL_TYPE.OTHER]: '🐾',
+} as const;
+
+export const POST_QUERY_KEYS = {
+  interactions: (postId: string) => ['post-interactions', postId] as const,
+  details: (postId: string) => ['post-details', postId] as const,
+  list: ['posts'] as const
+} as const;
+
+export const POST_MESSAGES = {
+  errors: {
+    delete: 'Không thể xóa bài viết',
+    load: 'Có lỗi xảy ra khi hiển thị bài viết',
+    retry: 'Thử lại'
+  },
+  success: {
+    delete: 'Đã xóa bài viết'
+  }
 } as const; 
