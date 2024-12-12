@@ -43,10 +43,12 @@ export const validateForm = async <T>(
     if (zodError instanceof z.ZodError) {
       const errors = zodError.errors.map(e => ({
         field: e.path.join('.'),
-        message: e.message
+        message: e.message,
+        status: 400,
+        name: 'ValidationError'
       }));
-        return { success: false, errors };
-      }
+      return { success: false, errors };
+    }
     throw zodError;
   }
 };

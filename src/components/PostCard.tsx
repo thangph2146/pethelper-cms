@@ -2,14 +2,10 @@
 
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import type { PostRow } from '@/types/supabase';
+import type { PostCardProps } from '@/types/post';
 import { useRouter } from 'next/navigation';
 
-interface PostCardProps {
-  post: PostRow;
-}
-
-export function PostCard({ post }: PostCardProps) {
+export const PostCard = ({ post }: PostCardProps) => {
   const router = useRouter();
 
   return (
@@ -32,4 +28,4 @@ export function PostCard({ post }: PostCardProps) {
       </div>
     </Card>
   );
-} 
+}; 
