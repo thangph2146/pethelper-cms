@@ -1,4 +1,10 @@
 import { useState } from 'react';
+
+const REPORT_REASONS: { value: string; label: string }[] = [
+  { value: 'spam', label: 'Spam' },
+  { value: 'abuse', label: 'Abuse' },
+  { value: 'other', label: 'Other' }
+];
 import { ReportService } from '@/services/report.service';
 import type { ApiError } from '@/types/error';
 
@@ -18,12 +24,13 @@ export const ReportDialog = ({ postId, onClose, onSuccess }: ReportDialogProps) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ReportError | null>(null);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     try {
       await ReportService.createReport(postId, {
         reason,
-        description: description.trim() || undefined
+        description: description.trim() || ''
       });
       onSuccess();
       onClose();
@@ -48,7 +55,7 @@ export const ReportDialog = ({ postId, onClose, onSuccess }: ReportDialogProps) 
             <label className="block mb-2">Lý do báo cáo</label>
             <select
               value={reason}
-              onChange={e => setReason(e.target.value)}
+              onChange={(e) => setReason(e.target.value)}
               className="w-full p-2 border rounded-lg"
               required
             >

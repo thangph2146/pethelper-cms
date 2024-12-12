@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { UserService } from '@/services/user.service';
 import { toast } from 'react-hot-toast';
+import { useUserService } from '@/services/client/user.service';
 
 interface SavePostButtonProps {
   postId: string;
@@ -10,15 +10,15 @@ interface SavePostButtonProps {
 export const SavePostButton = ({ postId, initialSaved = false }: SavePostButtonProps) => {
   const [saved, setSaved] = useState(initialSaved);
   const [loading, setLoading] = useState(false);
-
+  const { savePost, unsavePost } = useUserService();
   const handleClick = async () => {
     try {
       setLoading(true);
       if (saved) {
-        await UserService.unsavePost(postId);
+        await unsavePost(postId);
         toast.success('Đã bỏ lưu bài đăng');
       } else {
-        await UserService.savePost(postId);
+        await savePost(postId);
         toast.success('Đã lưu bài đăng');
       }
       setSaved(!saved);

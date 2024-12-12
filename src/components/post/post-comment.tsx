@@ -1,85 +1,85 @@
 'use client';
 
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { useAuth } from '@/hooks/use-auth';
+import { useComments } from '@/hooks/use-comments';
+import { useNotifications } from '@/hooks/use-notifications';
 import { format } from 'date-fns';
-import { PostService } from '@/services/post.service';
-import { toast } from 'react-hot-toast';
-import type { ICommentPopulated } from '@backend/models/Comment';
+import { vi } from 'date-fns/locale';
+import { MessageCircle, Send } from 'lucide-react';
 
 interface PostCommentProps {
   postId: string;
-  comments: ICommentPopulated[] | undefined;
-  onCommentAdded: () => void;
+  authorId: string;
 }
 
-export function PostComment({ postId, comments, onCommentAdded }: PostCommentProps) {
-  const { data: session } = useSession();
+export function PostComment({ postId, authorId }: PostCommentProps) {
+  const { user } = useAuth();
+  const { addComment } = useComments();
+  const { sendNotification } = useNotifications();
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!content.trim()) return;
+  const handleSubmit = async () => {
+    if (!content.trim() || !user) return;
 
     try {
       setIsSubmitting(true);
-      await PostService.addComment(postId, content);
+      const comment = await addComment(postId, content);
+
+      // Gửi thông báo cho tác giả bài viết
+      if (user.id !== authorId) {
+        await sendNotification({
+          type: 'comment',
+          recipientId: authorId,
+          postId,
+          commentId: comment.id,
+          message: `${user.name} đã bình luận về bài viết của bạn`
+        });
+      }
+
       setContent('');
-      onCommentAdded();
-      toast.success('Thêm bình luận thành công');
-    } catch (error: unknown) {
-      console.error(error);
-      toast.error('Có lỗi xảy ra khi thêm bình luận');
+    } catch (error) {
+      console.error('Failed to add comment:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return (
-    <div>
-      <h3 className="text-xl font-semibold mb-4">Bình luận ({comments?.length ?? 0})</h3>
-      
-      {session && (
-        <form onSubmit={handleSubmit} className="mb-6">
-          <Textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            placeholder="Viết bình luận..."
-            className="mb-2"
-          />
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Đang gửi...' : 'Gửi bình luận'}
-          </Button>
-        </form>
-      )}
+  if (!user) return null;
 
-      <div className="space-y-4">
-        {comments?.map((comment) => (
-          <div key={String(comment._id)} className="flex gap-3">
-            <Avatar>
-              <AvatarImage 
-                src={comment.author.image} 
-                alt={comment.author.name || 'User avatar'} 
-              />
-              <AvatarFallback>
-                {comment.author.name?.[0] || '?'}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">{comment.author.name}</span>
-                <span className="text-sm text-gray-500">
-                  {format(new Date(comment.createdAt), 'dd/MM/yyyy HH:mm')}
-                </span>
-              </div>
-              <p className="mt-1 text-gray-700">{comment.content}</p>
-            </div>
-          </div>
-        ))}
+  return (
+    <div className="flex items-start gap-2 p-4">
+      <Avatar className="h-8 w-8">
+        <AvatarImage src={user.avatar} />
+        <AvatarFallback>{user.name[0]}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1 space-y-2">
+        <Textarea
+          placeholder="Viết bình luận..."
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          className="min-h-[60px] resize-none"
+        />
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            onClick={handleSubmit}
+            disabled={!content.trim() || isSubmitting}
+          >
+            {isSubmitting ? (
+              'Đang gửi...'
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Gửi bình luận
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

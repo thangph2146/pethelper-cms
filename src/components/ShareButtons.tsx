@@ -36,7 +36,6 @@ export const ShareButtons = ({
     <div className="flex flex-wrap gap-2 items-center">
       <FacebookShareButton 
         url={url} 
-        quote={`${title}\n\n${description}`}
         hashtag={`#${hashtags[0]}`}
       >
         <FacebookIcon size={32} round />

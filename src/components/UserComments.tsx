@@ -1,26 +1,19 @@
 import { useState, useEffect } from 'react';
-import { UserService } from '@/services/user.service';
 import Link from 'next/link';
-
-interface Comment {
-  _id: string;
-  content: string;
-  postId: {
-    _id: string;
-    title: string;
-  };
-  createdAt: string;
-}
+import { useUserService } from '@/services/client/user.service';
+import { IComment } from '@backend/models/Comment';
+import { IPost } from '@backend/models/Post';
 
 export const UserComments = () => {
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<IComment[]>([]);
   const [loading, setLoading] = useState(true);
+  const { getUserComments } = useUserService();
 
   useEffect(() => {
     const fetchComments = async () => {
       try {
-        const data = await UserService.getUserComments();
-        setComments(data);
+            const data = await getUserComments();
+            setComments(data);
       } catch (error) {
         console.error('Error fetching comments:', error);
       } finally {
@@ -41,12 +34,12 @@ export const UserComments = () => {
         </p>
       ) : (
         comments.map(comment => (
-          <div key={comment._id} className="bg-white rounded-lg shadow p-4">
-            <Link 
-              href={`/posts/${comment.postId._id}`}
+          <div key={comment._id as string} className="bg-white rounded-lg shadow p-4">
+              <Link 
+              href={`/posts/${comment.post._id}`}
               className="font-medium hover:text-blue-600"
             >
-              {comment.postId.title}
+              {(comment.post as IPost).title}
             </Link>
             <p className="mt-2 text-gray-600">{comment.content}</p>
             <p className="mt-1 text-sm text-gray-500">

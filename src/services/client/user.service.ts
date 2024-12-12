@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { User, AuthError } from '@supabase/supabase-js';
+import type { IComment } from '@backend/models/Comment';
 
 interface UserProfile {
   id: string;
@@ -16,6 +17,30 @@ interface UpdateProfileData {
 }
 
 export function useUserService() {
+  const savePost = async (postId: string): Promise<void> => {
+    const { data, error } = await supabase
+      .from('saved_posts')
+      .insert({ post_id: postId });
+  }
+  const unsavePost = async (postId: string): Promise<void> => {
+    const { data, error } = await supabase
+      .from('saved_posts')
+      .delete()
+      .eq('post_id', postId);
+  }
+  const getUserComments = async (): Promise<IComment[]> => {
+    const { data, error } = await supabase
+      .from('comments')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    if (!data) throw new Error('Không tìm thấy bình luận');
+
+    return data;
+  }
+
+
   const getCurrentUser = async (): Promise<User> => {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
@@ -69,7 +94,10 @@ export function useUserService() {
 
   return {
     getCurrentUser,
+    getUserComments,
     getProfile,
-    updateProfile
+    updateProfile,
+    savePost,
+    unsavePost
   };
 } 

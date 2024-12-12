@@ -1,8 +1,10 @@
 import axiosInstance from '@/utils/axiosInstance';
 import type { IPost } from '@backend/models/Post';
 import type { IComment } from '@backend/models/Comment';
-  import type { PostsResponse, GetPostByIdParams, CreatePostData } from '@/types/post';
+import type { PostsResponse, GetPostByIdParams, CreatePostData } from '@/types/post';
 import type { ApiResponse } from '@/types/common';
+import type { PostInteractionStats } from '@/types/post';
+import { GetPostsParams } from '@/hooks/use-post-service';
 
 export const PostService = {
   getAllPosts: async (page = 1, id: string, params: GetPostByIdParams = { id }): Promise<PostsResponse | void> => {
@@ -53,5 +55,12 @@ export const PostService = {
   addComment: async (postId: string, content: string): Promise<ApiResponse<IComment> | void> => {
     const response = await axiosInstance.post<ApiResponse<IComment>>(`/api/posts/${postId}/comments`, { content });
     return response.data;
-  }
+  },
+
+  getInteractionStats: async (postId: string): Promise<PostInteractionStats> => {
+    const response = await axiosInstance.get(`/posts/${postId}/interactions`);
+    return response.data as PostInteractionStats;
+  },
+
+  
 }; 

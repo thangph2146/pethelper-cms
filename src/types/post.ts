@@ -68,11 +68,33 @@ export type PostType = typeof POST_TYPES[number];
 export type PostStatus = typeof POST_STATUSES[number];
 export type PostUrgency = typeof POST_URGENCIES[number];
 
+export const DISTANCE_OPTIONS = {
+  all: 'Tất cả',
+  '5': 'Dưới 5km',
+  '10': 'Dưới 10km',
+  '20': 'Dưới 20km',
+  '50': 'Dưới 50km'
+} as const;
+
+export const TIME_RANGE_OPTIONS = {
+  all: 'Tất cả thời gian',
+  today: 'Hôm nay',
+  week: '7 ngày qua',
+  month: '30 ngày qua'
+} as const;
+
 export interface PostFilters {
   keyword?: string;
   type?: PostType;
   status?: PostStatus;
   urgency?: PostUrgency;
+  distance?: number;
+  timeRange?: keyof typeof TIME_RANGE_OPTIONS;
+  dateFrom?: string;
+  dateTo?: string;
+  readStatus?: 'all' | 'read' | 'unread';
+  starred?: boolean;
+  interaction?: 'liked' | 'commented' | 'saved';
   limit?: number;
 }
 
@@ -121,5 +143,65 @@ export const POST_URGENCY_LABELS: Record<PostUrgency | 'all', string> = {
 } as const;
 
 export interface PostCardProps {
-  post: Pick<IPost, 'id' | 'title' | 'content' | 'user_id' | 'status' | 'created_at' | 'updated_at'>;
+  post: {
+    id: string;
+    title: string;
+    content: string;
+    created_at: string;
+    author: {
+      id: string;
+      name: string;
+      avatar?: string;
+    };
+    isLiked: boolean;
+    likeCount: number;
+    commentCount: number;
+    status: PostStatus;
+    urgency: PostUrgency;
+    location?: string;
+    images?: string[];
+    contactInfo?: string;
+  };
+}
+
+export interface ReportDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  postId: string;
+}
+
+export const READ_STATUS_OPTIONS = {
+  all: 'Tất cả',
+  read: 'Đã xem',
+  unread: 'Chưa xem'
+} as const;
+
+export interface PostInteractionStats {
+  hasLiked: boolean;
+  hasCommented: boolean;
+  hasSaved: boolean;
+  likeCount: number;
+  commentCount: number;
+  saveCount: number;
+}
+
+export interface Post {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  author: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+  isLiked: boolean;
+  likeCount: number;
+  commentCount: number;
+  status: 'need_help' | 'helping' | 'helped';
+  urgency: 'high' | 'medium' | 'low';
+  location?: string;
+  contactInfo?: string;
+  images?: string[];
+  viewCount?: number;
 }

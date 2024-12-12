@@ -2,6 +2,7 @@ import React from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Providers } from '@/components/Providers';
 import './globals.css';
+import { Toaster } from 'sonner';
 
 export const metadata = {
   title: 'PetHelper - Hỗ trợ cứu trợ động vật',
@@ -22,6 +23,7 @@ export default function RootLayout({
             {children}
           </main>
         </Providers>
+        <Toaster richColors position="top-center" />
       </body>
     </html>
   );

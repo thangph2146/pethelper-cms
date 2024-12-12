@@ -1,34 +1,45 @@
-import { useState, useEffect } from 'react';
-import { io } from 'socket.io-client';
-import type { INotification } from '@/types/notification';
+import { useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/use-auth';
+import { toast } from 'sonner';
 
-export function useRealtimeNotifications(userId: string) {
-  const [notifications, setNotifications] = useState<INotification[]>([]);
-  const [loading, setLoading] = useState(true);
+export function useRealtimeNotifications() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    const socketClient = io(process.env.NEXT_PUBLIC_SOCKET_URL || '');
+    if (!user) return;
 
-    socketClient.on('connect', () => {
-      socketClient.emit('join', { userId });
-      setLoading(false);
-    });
+    // Kết nối WebSocket
+    const ws = new WebSocket(process.env.NEXT_PUBLIC_WS_URL!);
 
-    socketClient.on('notification', (notification: INotification) => {
-      setNotifications(prev => [notification, ...prev]);
-    });
+    ws.onopen = () => {
+      // Đăng ký nhận thông báo cho user
+      ws.send(JSON.stringify({
+        type: 'subscribe',
+        userId: user.id
+      }));
+    };
 
-    socketClient.on('disconnect', () => {
-      setLoading(true);
-    });
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      // Cập nhật cache
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+
+      // Hiển thị toast thông báo
+      toast(data.message, {
+        action: {
+          label: 'Xem',
+          onClick: () => {
+            // Điều hướng đến bài viết/thông báo
+          }
+        }
+      });
+    };
 
     return () => {
-      socketClient.disconnect();
+      ws.close();
     };
-  }, [userId]);
-
-  return {
-    notifications,
-    loading
-  };
+  }, [user, queryClient]);
 } 

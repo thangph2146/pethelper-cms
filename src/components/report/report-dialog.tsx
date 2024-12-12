@@ -1,110 +1,76 @@
 'use client';
 
-import { useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Flag } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { useState } from 'react';
+import { usePostService } from '@/hooks/use-post-service';
+import { toast } from 'sonner';
+import { ReportDialogProps } from '@/types/post';
 
-interface ReportDialogProps {
-  postId: string;
-}
-
-const REPORT_REASONS = [
-  { id: 'spam', label: 'Spam' },
-  { id: 'inappropriate', label: 'Nội dung không phù hợp' },
-  { id: 'fake', label: 'Thông tin giả mạo' },
-  { id: 'other', label: 'Khác' },
-];
-
-export function ReportDialog({ postId }: ReportDialogProps) {
-  const { data: session } = useSession();
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedReason, setSelectedReason] = useState('');
-  const [description, setDescription] = useState('');
+export function ReportDialog({ open, onOpenChange, postId }: ReportDialogProps) {
+  const [reason, setReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { reportPost } = usePostService();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedReason) {
-      toast.error('Vui lòng chọn lý do báo cáo');
+  const handleSubmit = async () => {
+    if (!reason.trim()) {
+      toast.error('Vui lòng nhập lý do báo cáo');
       return;
     }
 
     try {
       setIsSubmitting(true);
-      const response = await fetch('/api/reports', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          postId,
-          reason: selectedReason,
-          description,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Có lỗi xảy ra');
-      }
-
-      toast.success('Báo cáo đã được gửi thành công');
-      setIsOpen(false);
-      setSelectedReason('');
-      setDescription('');
-    } catch {
-      toast.error('Có lỗi xảy ra khi gửi báo cáo');
+      await reportPost(postId, reason);
+      toast.success('Đã gửi báo cáo');
+      onOpenChange(false);
+      setReason('');
+    } catch (error) {
+      toast.error('Không thể gửi báo cáo');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!session) return null;
-
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-          <Flag className="w-4 h-4 mr-2" />
-          Báo cáo
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Báo cáo bài viết</DialogTitle>
+          <DialogDescription>
+            Vui lòng cho chúng tôi biết lý do bạn báo cáo bài viết này
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Lý do báo cáo</label>
-            <div className="grid grid-cols-2 gap-2">
-              {REPORT_REASONS.map((reason) => (
-                <Button
-                  key={reason.id}
-                  type="button"
-                  variant={selectedReason === reason.id ? 'default' : 'outline'}
-                  onClick={() => setSelectedReason(reason.id)}
-                >
-                  {reason.label}
-                </Button>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Mô tả chi tiết</label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Nhập mô tả chi tiết về vấn đề..."
-              rows={4}
-            />
-          </div>
-          <Button type="submit" disabled={isSubmitting} className="w-full">
+
+        <Textarea
+          placeholder="Nhập lý do báo cáo..."
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          rows={4}
+        />
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
+            Hủy
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+          >
             {isSubmitting ? 'Đang gửi...' : 'Gửi báo cáo'}
           </Button>
-        </form>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
