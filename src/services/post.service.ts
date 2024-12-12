@@ -1,7 +1,7 @@
 import axiosInstance from '@/utils/axiosInstance';
 import type { IPost } from '@backend/models/Post';
 import type { IComment } from '@backend/models/Comment';
-import type { PostsResponse, GetPostsParams, CreatePostData, ApiResponse } from '@/types/api';
+import type { PostsResponse, GetPostsParams, CreatePostData, ApiResponse } from '@/types/post';
 
 export const PostService = {
   getAllPosts: async (page = 1, params: GetPostsParams = {}): Promise<PostsResponse> => {

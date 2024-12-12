@@ -1,6 +1,3 @@
-import type { IUser } from './user';
-import type { IComment } from './comment';
-
 export interface IPost {
   _id: string;
   title: string;
@@ -47,3 +44,17 @@ export interface PostResponse {
     totalPages: number;
   };
 } 
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
+
+export type PostsResponse = ApiResponse<PostResponse>;
+export type GetPostsParams = {
+  page?: number;
+  limit?: number;
+  category?: string;
+  status?: string;
+};
+export type CreatePostData = Omit<IPost, '_id' | 'author' | 'likes' | 'comments' | 'createdAt' | 'updatedAt'>;
