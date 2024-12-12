@@ -11,19 +11,36 @@ const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_TIME = 15 * 60 * 1000; // 15 phút
 
 export async function POST(request: Request) {
+  let prismaConnection = null;
+  
   try {
-    // Kiểm tra kết nối database
+    // Kiểm tra kết nối database với timeout
     try {
-      await prisma.$connect();
+      const connectionPromise = prisma.$connect();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Database connection timeout')), 10000);
+      });
+      
+      await Promise.race([connectionPromise, timeoutPromise]);
+      prismaConnection = true;
+      console.log('Kết nối database thành công');
+      
     } catch (error) {
-      if (error instanceof PrismaClientInitializationError) {
-        console.error('Lỗi kết nối database:', error);
-        return NextResponse.json({
-          success: false,
-          message: 'Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.',
-        }, { status: 503 });
+      console.error('Chi tiết lỗi kết nối:', error);
+      
+      // Log thông tin database URL (ẩn password)
+      const dbUrl = process.env.DATABASE_URL;
+      if (dbUrl) {
+        console.log('Database URL:', dbUrl.replace(/:[^:@]*@/, ':****@'));
+      } else {
+        console.error('DATABASE_URL không được định nghĩa');
       }
-      throw error;
+      
+      return NextResponse.json({
+        success: false,
+        message: 'Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 503 });
     }
 
     const body = await request.json();
@@ -33,7 +50,6 @@ export async function POST(request: Request) {
       password: body.password
     };
 
-    console.log('Đang kết nối');
     // Kiểm tra user có tồn tại
     const user = await prisma.user.findUnique({
       where: { email: loginData.email },
@@ -128,7 +144,9 @@ export async function POST(request: Request) {
   } catch (error) {
     return errorHandler(error);
   } finally {
-    // Đảm bảo ngắt kết nối database sau khi hoàn thành
-    await prisma.$disconnect();
+    // Chỉ disconnect nếu đã kết nối thành công
+    if (prismaConnection) {
+      await prisma.$disconnect();
+    }
   }
 } 
