@@ -11,21 +11,17 @@ export interface LoginFormErrors {
 }
 
 export interface RegisterFormState {
-  name: string;
   email: string;
   password: string;
   confirmPassword: string;
-  phone?: string;
-  acceptTerms: boolean;
+  name: string;
 }
 
 export interface RegisterFormErrors {
-  name?: string;
   email?: string;
   password?: string;
   confirmPassword?: string;
-  phone?: string;
-  acceptTerms?: string;
+  name?: string;
   form?: string;
 }
 

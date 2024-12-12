@@ -1,84 +1,69 @@
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { tokenUtils } from '@/utils/token';
-import { errorHandler } from '@/middleware/error-handler';
-import { ValidationError } from '@/types/error';
 
-export async function POST(request: Request) {
+export async function GET() {
   try {
-    const { token, deviceInfo, expiresAt } = await request.json();
+    const supabase = createRouteHandlerClient({ cookies });
     
-    // Verify token để lấy userId
-    const decoded = tokenUtils.verifyToken(token);
-    
-    // Tạo session mới
-    await prisma.session.create({
-      data: {
-        userId: decoded.id,
-        token,
-        deviceInfo,
-        expiresAt: new Date(expiresAt)
-      }
-    });
+    // Lấy session hiện tại
+    const { data: { session }, error } = await supabase.auth.getSession();
 
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    return errorHandler(error);
+    if (error) {
+      throw error;
+    }
+
+    // Nếu có session, lấy thêm thông tin user từ database
+    if (session?.user) {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
+      if (userError) {
+        console.error('Lỗi khi lấy thông tin user:', userError);
+      }
+
+      return NextResponse.json({
+        session,
+        user: userData
+      });
+    }
+
+    return NextResponse.json({ session: null });
+
+  } catch (error: any) {
+    return NextResponse.json(
+      { 
+        error: error.message || 'Đã có lỗi xảy ra khi lấy thông tin session',
+        session: null 
+      },
+      { status: 500 }
+    );
   }
 }
 
-export async function GET(request: Request) {
+export async function DELETE() {
   try {
-    const token = tokenUtils.getTokenFromHeader(request.headers.get('Authorization'));
-    if (!token) {
-      return NextResponse.json({ status: false });
+    const supabase = createRouteHandlerClient({ cookies });
+
+    // Đăng xuất và xóa session
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      throw error;
     }
 
-    // Kiểm tra session trong database
-    const session = await prisma.session.findUnique({
-      where: { token },
-      include: { user: true }
+    return NextResponse.json({
+      success: true,
+      message: 'Đăng xuất thành công'
     });
 
-    if (!session || session.expiresAt < new Date() || session.user.status !== 'active') {
-      return NextResponse.json({ status: false });
-    }
-
-    // Cập nhật lastActivity
-    await prisma.session.update({
-      where: { id: session.id },
-      data: { lastActivity: new Date() }
-    });
-
-    return NextResponse.json({ 
-      status: true,
-      user: {
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.name,
-        role: session.user.role,
-        status: session.user.status
-      }
-    });
-  } catch (error) {
-    return errorHandler(error);
-  }
-}
-
-export async function DELETE(request: Request) {
-  try {
-    const token = tokenUtils.getTokenFromHeader(request.headers.get('Authorization'));
-    if (!token) {
-      throw new ValidationError('Token không hợp lệ', 401);
-    }
-
-    // Xóa session từ database
-    await prisma.session.deleteMany({
-      where: { token }
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    return errorHandler(error);
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || 'Đã có lỗi xảy ra khi đăng xuất' },
+      { status: 500 }
+    );
   }
 } 

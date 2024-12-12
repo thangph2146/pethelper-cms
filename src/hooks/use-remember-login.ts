@@ -1,35 +1,35 @@
-import { useState, useEffect } from 'react';
+'use client';
 
 export function useRememberLogin() {
-  const [savedEmail, setSavedEmail] = useState<string>('');
-
-  useEffect(() => {
-    // Load saved email khi component mount
-    const email = localStorage.getItem('savedEmail');
-    if (email) {
-      setSavedEmail(email);
-    }
-  }, []);
-
   const saveLoginInfo = (email: string) => {
-    localStorage.setItem('savedEmail', email);
-    setSavedEmail(email);
+    try {
+      localStorage.setItem('savedEmail', email);
+    } catch (error) {
+      console.error('Lỗi khi lưu thông tin đăng nhập:', error);
+    }
+  };
+
+  const getSavedEmail = (): string => {
+    try {
+      return localStorage.getItem('savedEmail') || '';
+    } catch (error) {
+      console.error('Lỗi khi lấy thông tin đăng nhập:', error);
+      return '';
+    }
   };
 
   const clearLoginInfo = () => {
-    localStorage.removeItem('savedEmail');
-    localStorage.removeItem('rememberMe');
-    setSavedEmail('');
-  };
-
-  const getSavedEmail = () => {
-    return localStorage.getItem('savedEmail') || '';
+    try {
+      localStorage.removeItem('savedEmail');
+      localStorage.removeItem('rememberMe');
+    } catch (error) {
+      console.error('Lỗi khi xóa thông tin đăng nhập:', error);
+    }
   };
 
   return {
-    savedEmail,
     saveLoginInfo,
-    clearLoginInfo,
-    getSavedEmail
+    getSavedEmail,
+    clearLoginInfo
   };
 } 

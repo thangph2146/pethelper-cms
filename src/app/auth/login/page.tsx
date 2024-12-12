@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Card, CardHeader, CardContent, CardFooter, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/form/form-field';
-import { AuthService } from '@/services/auth.service';
+import { useAuthContext } from '@/providers/auth-provider';
 import { useRememberLogin } from '@/hooks/use-remember-login';
 import type { LoginFormState, LoginFormErrors } from '@/types/form';
 import { EnvelopeIcon, LockClosedIcon } from '@heroicons/react/24/outline';
@@ -14,6 +14,7 @@ import { EnvelopeIcon, LockClosedIcon } from '@heroicons/react/24/outline';
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { login } = useAuthContext();
   const { saveLoginInfo, getSavedEmail } = useRememberLogin();
 
   const [formData, setFormData] = useState<LoginFormState>({
@@ -25,23 +26,19 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<LoginFormErrors>({});
 
-  // Hiển thị thông báo đăng ký thành công nếu có
-  const registeredMessage = searchParams.get('registered') && (
+  const registered = searchParams.get('registered');
+  const verified = searchParams.get('verified');
+  const reset = searchParams.get('reset');
+
+  // Hiển thị thông báo thành công
+  const successMessage = (registered || verified || reset) && (
     <div className="bg-green-100 text-green-700 p-3 rounded mb-4">
-      Đăng ký thành công! Vui lòng đăng nhập để tiếp tục.
+      {registered && 'Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.'}
+      {verified && 'Xác thực email thành công! Vui lòng đăng nhập để tiếp tục.'}
+      {reset === 'requested' && 'Email khôi phục mật khẩu đã được gửi. Vui lòng kiểm tra hộp thư của bạn.'}
+      {reset === 'success' && 'Đặt lại mật khẩu thành công! Vui lòng đăng nhập với mật khẩu mới.'}
     </div>
   );
-
-  // Kiểm tra session khi mount component
-  useEffect(() => {
-    const checkSession = async () => {
-      const isValid = await AuthService.validateSession();
-      if (isValid) {
-        router.push('/');
-      }
-    };
-    checkSession();
-  }, [router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -64,10 +61,7 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      await AuthService.login({
-        email: formData.email,
-        password: formData.password
-      });
+      await login(formData.email, formData.password);
 
       if (formData.rememberMe) {
         localStorage.setItem('rememberMe', 'true');
@@ -81,11 +75,9 @@ export default function LoginPage() {
       router.refresh();
       
     } catch (error: any) {
-      if (error.field) {
-        setErrors({ [error.field]: error.message });
-      } else {
-        setErrors({ form: error.message });
-      }
+      setErrors({
+        form: error.message || 'Đã có lỗi xảy ra khi đăng nhập'
+      });
     } finally {
       setLoading(false);
     }
@@ -99,8 +91,7 @@ export default function LoginPage() {
         </CardHeader>
 
         <CardContent>
-          {registeredMessage}
-          
+          {successMessage}
           {errors.form && (
             <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
               {errors.form}
@@ -116,7 +107,6 @@ export default function LoginPage() {
               placeholder="Nhập email của bạn"
               required
               error={errors.email}
-              icon={<EnvelopeIcon className="h-5 w-5 text-gray-400" />}
               value={formData.email}
               onChange={handleChange}
             />
@@ -129,7 +119,6 @@ export default function LoginPage() {
               placeholder="Nhập mật khẩu"
               required
               error={errors.password}
-              icon={<LockClosedIcon className="h-5 w-5 text-gray-400" />}
               value={formData.password}
               onChange={handleChange}
             />

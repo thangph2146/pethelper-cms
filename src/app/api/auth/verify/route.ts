@@ -1,89 +1,57 @@
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { ValidationError } from '@/types/error';
-import { errorHandler } from '@/middleware/error-handler';
-import { tokenUtils } from '@/utils/token';
 
-// Xác thực email
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   try {
-    const { token } = await request.json();
-    if (!token) {
-      throw new ValidationError('Token xác thực không hợp lệ', 400);
+    const { searchParams } = new URL(request.url);
+    const token = searchParams.get('token');
+    const type = searchParams.get('type');
+
+    if (!token || type !== 'email') {
+      return NextResponse.json(
+        { error: 'Token không hợp lệ hoặc đã hết hạn' },
+        { status: 400 }
+      );
     }
 
-    // Verify token
-    const decoded = tokenUtils.verifyToken(token);
+    const supabase = createRouteHandlerClient({ cookies });
 
-    // Tìm user
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.id }
+    // Xác thực email với Supabase
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash: token,
+      type: 'email'
     });
 
-    if (!user) {
-      throw new ValidationError('Người dùng không tồn tại', 404);
+    if (error) {
+      throw error;
     }
 
-    if (user.status === 'active') {
-      throw new ValidationError('Email đã được xác thực', 400);
-    }
+    // Cập nhật trạng thái xác thực trong bảng users
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          email_verified: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
 
-    // Cập nhật trạng thái user
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { 
-        status: 'active',
-        emailVerifiedAt: new Date()
+      if (updateError) {
+        console.error('Lỗi khi cập nhật trạng thái xác thực:', updateError);
       }
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: 'Xác thực email thành công'
-    });
-
-  } catch (error) {
-    return errorHandler(error);
-  }
-}
-
-// Gửi lại email xác thực
-export async function PUT(request: Request) {
-  try {
-    const { email } = await request.json();
-    if (!email) {
-      throw new ValidationError('Email là bắt buộc', 400);
     }
 
-    // Tìm user
-    const user = await prisma.user.findUnique({
-      where: { email }
-    });
+    // Redirect về trang login với thông báo thành công
+    return NextResponse.redirect(
+      new URL('/auth/login?verified=true', request.url)
+    );
 
-    if (!user) {
-      throw new ValidationError('Email không tồn tại', 404);
-    }
-
-    if (user.status === 'active') {
-      throw new ValidationError('Email đã được xác thực', 400);
-    }
-
-    // Tạo verification token
-    const token = tokenUtils.generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role
-    });
-
-    // TODO: Gửi email xác thực
-    // await sendVerificationEmail(user.email, token);
-
-    return NextResponse.json({
-      success: true,
-      message: 'Đã gửi lại email xác thực'
-    });
-
-  } catch (error) {
-    return errorHandler(error);
+  } catch (error: any) {
+    // Redirect về trang error với thông báo lỗi
+    const errorUrl = new URL('/auth/error', request.url);
+    errorUrl.searchParams.set('error', error.message || 'Xác thực email thất bại');
+    return NextResponse.redirect(errorUrl);
   }
 } 

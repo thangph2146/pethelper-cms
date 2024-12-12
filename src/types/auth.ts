@@ -1,4 +1,4 @@
-import type { User } from '@prisma/client';
+import { User } from "@supabase/supabase-js";
 
 export interface LoginData {
   email: string;

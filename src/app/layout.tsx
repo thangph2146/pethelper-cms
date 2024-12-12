@@ -3,6 +3,7 @@ import { Navbar } from '@/components/Navbar';
 import { Providers } from '@/components/Providers';
 import { Toaster } from 'react-hot-toast';
 import './globals.css';
+import { AuthProvider } from '@/providers/auth-provider';
 
 export const metadata = {
   title: 'PetHelper - Hỗ trợ cứu trợ động vật',
@@ -15,14 +16,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi">
+    <html lang="en">
       <body>
-        <Providers>
-          <Navbar />
-          <main className="min-h-screen bg-gray-50">
-            {children}
-          </main>
-        </Providers>
+        <AuthProvider>
+          <Providers>
+            <Navbar />
+            <main className="min-h-screen bg-gray-50">
+              {children}
+            </main>
+          </Providers>
+        </AuthProvider>
         <Toaster />
       </body>
     </html>

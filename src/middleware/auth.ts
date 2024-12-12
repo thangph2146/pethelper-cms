@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { tokenUtils } from '@/utils/token';
-import { prisma } from '@/lib/prisma';
 import { AuthenticationError, AuthorizationError } from '@/types/error';
 
 export async function authMiddleware(request: NextRequest) {

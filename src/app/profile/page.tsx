@@ -1,114 +1,123 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useInfinitePosts } from '@/hooks/use-infinite-posts';
-import { PostList } from '@/components/PostList';
-import LoadingSpinner from '@/components/LoadingSpinner';
-import { UserComments } from '@/components/UserComments';
+import { useProfile } from '@/hooks/use-profile';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { FormField } from '@/components/form/form-field';
+import { toast } from 'react-hot-toast';
+import { ChangePasswordForm } from '@/components/profile/change-password-form';
 
-const TABS = [
-  { id: 'posts', label: 'Bài đăng của tôi' },
-  { id: 'saved', label: 'Đã lưu' },
-  { id: 'comments', label: 'Bình luận' }
-];
+interface ProfileFormData {
+  name: string;
+  phone: string;
+  address: string;
+}
 
 export default function ProfilePage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState('posts');
-
-  const { posts, loading, error, hasMore, loadMore } = useInfinitePosts({
-    filters: {
-      author: session?.user?.id
-    }
+  const { profile, loading, error, updateProfile } = useProfile();
+  const [formData, setFormData] = useState<ProfileFormData>({
+    name: profile?.name || '',
+    phone: profile?.phone || '',
+    address: profile?.address || ''
   });
+  const [updating, setUpdating] = useState(false);
 
-  if (status === 'loading') return <LoadingSpinner />;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
-  if (!session) {
-    router.push('/auth/signin');
-    return null;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUpdating(true);
+
+    try {
+      await updateProfile(formData);
+      toast.success('Cập nhật thông tin thành công');
+    } catch (error: any) {
+      toast.error(error.message || 'Đã có lỗi xảy ra khi cập nhật thông tin');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-500">Lỗi: {error}</div>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Profile Header */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex items-center gap-4">
-            {session.user?.image && (
-              <img
-                src={session.user.image}
-                alt={session.user.name || ''}
-                className="w-20 h-20 rounded-full"
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md mx-auto space-y-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Thông tin cá nhân</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <FormField
+                id="email"
+                label="Email"
+                value={profile?.email || ''}
+                disabled
+                readOnly
               />
-            )}
-            <div>
-              <h1 className="text-2xl font-bold">{session.user?.name}</h1>
-              <p className="text-gray-600">{session.user?.email}</p>
-            </div>
-          </div>
 
-          <div className="mt-6">
-            <button
-              onClick={() => router.push('/profile/edit')}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg"
-            >
-              Chỉnh sửa thông tin
-            </button>
-          </div>
-        </div>
+              <FormField
+                id="name"
+                label="Họ tên"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Nhập họ tên của bạn"
+              />
 
-        {/* Tabs */}
-        <div className="border-b mb-6">
-          <nav className="flex gap-4">
-            {TABS.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 -mb-px ${
-                  activeTab === tab.id
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
+              <FormField
+                id="phone"
+                label="Số điện thoại"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="Nhập số điện thoại"
+              />
+
+              <FormField
+                id="address"
+                label="Địa chỉ"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                placeholder="Nhập địa chỉ"
+              />
+
+              <Button
+                type="submit"
+                className="w-full"
+                loading={updating}
+                disabled={updating}
               >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
+                Cập nhật thông tin
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-        {/* Content */}
-        {activeTab === 'posts' && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold">Bài đăng của tôi</h2>
-              <button
-                onClick={() => router.push('/posts/new')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Đăng bài mới
-              </button>
-            </div>
-            <PostList filters={{ author: session.user.id }} />
-          </div>
-        )}
-
-        {activeTab === 'saved' && (
-          <div>
-            <h2 className="text-xl font-semibold mb-6">Bài đăng đã lưu</h2>
-            <PostList filters={{ saved: true }} />
-          </div>
-        )}
-
-        {activeTab === 'comments' && (
-          <div>
-            <h2 className="text-xl font-semibold mb-6">Bình luận của tôi</h2>
-            <UserComments />
-          </div>
-        )}
+        <ChangePasswordForm />
       </div>
     </div>
   );

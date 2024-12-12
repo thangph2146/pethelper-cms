@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { ValidationError, AuthenticationError, AuthorizationError } from '@/types/error';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 export function errorHandler(error: any) {
   console.error('API Error:', error);
@@ -13,7 +12,7 @@ export function errorHandler(error: any) {
         message: error.message,
         field: error.field
       },
-      { status: error.status }
+      { status: 400 }
     );
   }
 
@@ -24,7 +23,7 @@ export function errorHandler(error: any) {
         success: false,
         message: error.message
       },
-      { status: error.status }
+      { status: 400 }
     );
   }
 
@@ -35,12 +34,12 @@ export function errorHandler(error: any) {
         success: false,
         message: error.message
       },
-      { status: error.status }
+      { status: 400 }
     );
   }
 
   // Xử lý Prisma errors
-  if (error instanceof PrismaClientKnownRequestError) {
+    if (error instanceof any) {
     switch (error.code) {
       case 'P2002': // Unique constraint failed
         return NextResponse.json(

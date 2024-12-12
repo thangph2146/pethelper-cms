@@ -1,12 +1,9 @@
-
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = 'https://arbeqbuvldpudlsqpyqm.supabase.co'
-const supabaseKey = process.env.SUPABASE_KEY || 'default_supabase_key'
-if (!process.env.SUPABASE_KEY) {
-  throw new Error('SUPABASE_KEY is not defined')
-}
-const supabase = createClient(supabaseUrl, supabaseKey)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Example usage to avoid "value is never read" error
 supabase.auth.getSession().then(({ data: { session } }) => {

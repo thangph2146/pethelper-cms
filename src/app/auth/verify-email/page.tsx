@@ -1,68 +1,79 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
-import { Card } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
 import { AuthService } from '@/services/auth.service';
 
 export default function VerifyEmailPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get('email');
-  const [resending, setResending] = useState(false);
-  const [message, setMessage] = useState('');
+  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const handleResend = async () => {
+  const handleResendEmail = async () => {
     if (!email) return;
     
-    setResending(true);
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
     try {
       await AuthService.resendVerification(email);
-      setMessage('Email xác thực đã được gửi lại');
+      setSuccess('Đã gửi lại email xác thực. Vui lòng kiểm tra hộp thư của bạn.');
     } catch (error: any) {
-      setMessage(error.message || 'Có lỗi xảy ra khi gửi lại email');
+      setError(error.message || 'Đã có lỗi xảy ra khi gửi lại email xác thực');
     } finally {
-      setResending(false);
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="max-w-md w-full space-y-8 p-6">
-        <div>
-          <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            Xác thực email
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Chúng tôi đã gửi email xác thực đến {email}.<br />
-            Vui lòng kiểm tra hộp thư của bạn.
+      <Card className="max-w-md w-full">
+        <CardHeader>
+          <CardTitle>Xác thực Email</CardTitle>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          <p className="text-gray-600">
+            Chúng tôi đã gửi email xác thực đến <strong>{email}</strong>.
+            Vui lòng kiểm tra hộp thư của bạn và click vào link xác thực.
           </p>
-        </div>
 
-        {message && (
-          <div className="text-center text-sm text-green-600">
-            {message}
+          {error && (
+            <div className="bg-red-100 text-red-700 p-3 rounded">
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-100 text-green-700 p-3 rounded">
+              {success}
+            </div>
+          )}
+
+          <div className="flex flex-col space-y-4">
+            <Button
+              onClick={handleResendEmail}
+              loading={loading}
+              disabled={loading || !email}
+            >
+              Gửi lại email xác thực
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => router.push('/auth/login')}
+            >
+              Quay lại đăng nhập
+            </Button>
           </div>
-        )}
-
-        <div className="text-center">
-          <Button
-            onClick={handleResend}
-            disabled={resending}
-            variant="outline"
-          >
-            {resending ? 'Đang gửi...' : 'Gửi lại email xác thực'}
-          </Button>
-        </div>
-
-        <div className="text-sm text-center">
-          <a 
-            href="/auth/login"
-            className="font-medium text-indigo-600 hover:text-indigo-500"
-          >
-            Quay lại đăng nhập
-          </a>
-        </div>
+        </CardContent>
       </Card>
     </div>
   );

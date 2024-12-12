@@ -2,24 +2,24 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import Link from 'next/link';
+import { Card, CardHeader, CardContent, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
+import { FormField } from '@/components/form/form-field';
 import { AuthService } from '@/services/auth.service';
-import { ValidationError } from '@/types/error';
+import type { RegisterFormState, RegisterFormErrors } from '@/types/form';
+import { toast } from 'react-hot-toast';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
-  
-  const [formData, setFormData] = useState({
-    name: '',
+  const [formData, setFormData] = useState<RegisterFormState>({
     email: '',
     password: '',
-    phone: ''
+    confirmPassword: '',
+    name: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<RegisterFormErrors>({});
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -27,39 +27,63 @@ export default function RegisterPage() {
       ...prev,
       [name]: value
     }));
-    // Xóa lỗi khi user bắt đầu nhập
-    if (errors[name]) {
+    // Clear error khi user thay đổi input
+    if (errors[name as keyof RegisterFormErrors]) {
       setErrors(prev => ({
         ...prev,
-        [name]: ''
+        [name]: undefined
       }));
     }
   };
 
+  const validateForm = () => {
+    const newErrors: RegisterFormErrors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!formData.email) {
+      newErrors.email = 'Vui lòng nhập email';
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email = 'Email không hợp lệ';
+    }
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Vui lòng nhập họ tên';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Vui lòng nhập mật khẩu';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
+    }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Vui lòng xác nhận mật khẩu';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setErrors({});
+    if (!validateForm()) return;
 
+    setLoading(true);
     try {
-      await AuthService.register(formData);
-      router.push('/auth/verify-email?email=' + encodeURIComponent(formData.email));
-    } catch (error) {
-      if (error instanceof ValidationError) {
-        if (error.field) {
-          setErrors({
-            [error.field]: error.message
-          });
-        } else {
-          setErrors({
-            form: error.message
-          });
-        }
-      } else {
-        setErrors({
-          form: 'Có lỗi xảy ra khi đăng ký'
-        });
-      }
+      await AuthService.register({
+        email: formData.email,
+        password: formData.password,
+        name: formData.name.trim()
+      });
+      toast.success('Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản.');
+      router.push('/auth/login?registered=true');
+    } catch (error: any) {
+      setErrors({
+        form: error.message
+      });
+      toast.error(error.message || 'Đã có lỗi xảy ra khi đăng ký');
     } finally {
       setLoading(false);
     }
@@ -67,85 +91,80 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="max-w-md w-full space-y-8 p-6">
-        <div>
-          <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            Đăng ký tài khoản
-          </h2>
-        </div>
+      <Card className="max-w-md w-full">
+        <CardHeader>
+          <CardTitle>Đăng ký tài khoản</CardTitle>
+        </CardHeader>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <CardContent>
           {errors.form && (
-            <div className="text-red-500 text-sm text-center">
+            <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
               {errors.form}
             </div>
           )}
 
-          <div className="space-y-4">
-            <div>
-              <Input
-                name="name"
-                type="text"
-                placeholder="Họ và tên"
-                value={formData.name}
-                onChange={handleChange}
-                error={errors.name}
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <FormField
+              id="email"
+              label="Email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              error={errors.email}
+            />
 
-            <div>
-              <Input
-                name="email"
-                type="email"
-                placeholder="Email"
-                value={formData.email}
-                onChange={handleChange}
-                error={errors.email}
-              />
-            </div>
+            <FormField
+              id="name"
+              label="Họ tên"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              error={errors.name}
+            />
 
-            <div>
-              <Input
-                name="password"
-                type="password"
-                placeholder="Mật khẩu"
-                value={formData.password}
-                onChange={handleChange}
-                error={errors.password}
-              />
-            </div>
+            <FormField
+              id="password"
+              label="Mật khẩu"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
+              error={errors.password}
+            />
 
-            <div>
-              <Input
-                name="phone"
-                type="tel"
-                placeholder="Số điện thoại (tùy chọn)"
-                value={formData.phone}
-                onChange={handleChange}
-                error={errors.phone}
-              />
-            </div>
-          </div>
+            <FormField
+              id="confirmPassword"
+              label="Xác nhận mật khẩu"
+              name="confirmPassword"
+              type="password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              error={errors.confirmPassword}
+            />
 
-          <div>
             <Button
               type="submit"
               className="w-full"
+              loading={loading}
               disabled={loading}
             >
-              {loading ? <Spinner /> : 'Đăng ký'}
+              Đăng ký
             </Button>
-          </div>
+          </form>
+        </CardContent>
 
-          <div className="text-sm text-center">
-            <a 
+        <CardFooter className="text-center">
+          <p className="text-sm text-gray-600">
+            Đã có tài khoản?{' '}
+            <Link
               href="/auth/login"
               className="font-medium text-indigo-600 hover:text-indigo-500"
             >
-              Đã có tài khoản? Đăng nhập
-            </a>
-          </div>
-        </form>
+              Đăng nhập
+            </Link>
+          </p>
+        </CardFooter>
       </Card>
     </div>
   );
