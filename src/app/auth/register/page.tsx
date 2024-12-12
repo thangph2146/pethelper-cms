@@ -3,209 +3,217 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { validateRegisterData } from '@/utils/validation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
+import { AuthService } from '@/services/auth.service';
+import { ValidationError } from '@/types/error';
+import { validateRegisterData } from '@/utils/validation';
 
-interface FormErrors {
-  name?: string;
-  email?: string;
-  password?: string;
-  confirmPassword?: string;
+interface RegisterFormData {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  phone?: string;
 }
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<RegisterFormData>({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
     phone: ''
   });
-  const [errors, setErrors] = useState<FormErrors>({});
-  const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
 
-  const validateField = (field: keyof typeof formData) => {
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+
     try {
-      switch (field) {
-        case 'name':
-          validateRegisterData.name(formData.name);
-          break;
-        case 'email':
-          validateRegisterData.email(formData.email);
-          break;
-        case 'password':
-          validateRegisterData.password(formData.password);
-          break;
-        case 'phone':
-          validateRegisterData.phone(formData.phone);
-          break;
-        case 'confirmPassword':
-          if (formData.password !== formData.confirmPassword) {
-            throw new Error('Mật khẩu xác nhận không khớp');
-          }
-          break;
+      validateRegisterData.name(formData.name);
+      validateRegisterData.email(formData.email);
+      validateRegisterData.password(formData.password);
+      if (formData.phone) {
+        validateRegisterData.phone(formData.phone);
       }
-      // Xóa lỗi nếu validate thành công
-      setErrors(prev => ({ ...prev, [field]: undefined }));
-      return true;
     } catch (error: any) {
-      setErrors(prev => ({ ...prev, [field]: error.message }));
-      return false;
+      if (error instanceof ValidationError) {
+        newErrors[error.field || 'form'] = error.message;
+      }
     }
+
+    // Kiểm tra confirm password
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    // Validate realtime sau khi người dùng nhập
-    if (value) validateField(name as keyof typeof formData);
-  };
-
-  const validateForm = () => {
-    const fields: (keyof typeof formData)[] = ['name', 'email', 'password', 'confirmPassword', 'phone'];
-    const validations = fields.map(field => validateField(field));
-    return validations.every(isValid => isValid);
+    // Clear error khi user nhập
+    setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitError('');
+    
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
 
     try {
-      if (!validateForm()) {
-        setLoading(false);
-        return;
+      // Loại bỏ confirmPassword trước khi gửi request
+      const { confirmPassword, ...registerData } = formData;
+      
+      await AuthService.register(registerData);
+      
+      // Chuyển đến trang login với thông báo đăng ký thành công
+      router.push('/auth/login?registered=true');
+      
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        setErrors({ form: error.message });
+      } else {
+        setErrors({ form: 'Có lỗi xảy ra khi đăng ký' });
       }
-
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password,
-          phone: formData.phone
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Có lỗi xảy ra khi đăng ký');
-      }
-
-      if (data.success) {
-        router.push('/auth/login?registered=true');
-      }
-    } catch (error: any) {
-      setSubmitError(error.message || 'Có lỗi xảy ra khi đăng ký');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <Card className="max-w-md w-full p-6">
-        <CardHeader className="p-0">
-          <h1 className="text-2xl font-bold text-center">Đăng ký tài khoản</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="max-w-md w-full">
+        <CardHeader>
+          <h2 className="text-center text-3xl font-extrabold text-gray-900">
+            Đăng ký tài khoản
+          </h2>
         </CardHeader>
 
-        <CardContent className="p-0 mt-6">
-          {submitError && (
+        <CardContent>
+          {errors.form && (
             <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
-              {submitError}
+              {errors.form}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium mb-1">Họ tên</label>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                Họ tên
+              </label>
               <Input
-                type="text"
+                id="name"
                 name="name"
+                type="text"
                 value={formData.name}
                 onChange={handleChange}
                 className={errors.name ? 'border-red-500' : ''}
+                placeholder="Nhập họ tên của bạn"
                 required
               />
-              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+              {errors.name && <p className="mt-1 text-sm text-red-500">{errors.name}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email
+              </label>
               <Input
-                type="email"
+                id="email"
                 name="email"
+                type="email"
                 value={formData.email}
                 onChange={handleChange}
                 className={errors.email ? 'border-red-500' : ''}
+                placeholder="Nhập email của bạn"
                 required
               />
-              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+              {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Số điện thoại</label>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Mật khẩu
+              </label>
               <Input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">Mật khẩu</label>
-              <Input
-                type="password"
+                id="password"
                 name="password"
+                type="password"
                 value={formData.password}
                 onChange={handleChange}
                 className={errors.password ? 'border-red-500' : ''}
+                placeholder="Nhập mật khẩu (ít nhất 6 ký tự)"
                 required
-                minLength={6}
               />
-              {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+              {errors.password && <p className="mt-1 text-sm text-red-500">{errors.password}</p>}
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Xác nhận mật khẩu</label>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                Xác nhận mật khẩu
+              </label>
               <Input
-                type="password"
+                id="confirmPassword"
                 name="confirmPassword"
+                type="password"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 className={errors.confirmPassword ? 'border-red-500' : ''}
+                placeholder="Nhập lại mật khẩu"
                 required
               />
               {errors.confirmPassword && (
-                <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>
+                <p className="mt-1 text-sm text-red-500">{errors.confirmPassword}</p>
               )}
+            </div>
+
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                Số điện thoại (không bắt buộc)
+              </label>
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={handleChange}
+                className={errors.phone ? 'border-red-500' : ''}
+                placeholder="Nhập số điện thoại"
+              />
+              {errors.phone && <p className="mt-1 text-sm text-red-500">{errors.phone}</p>}
             </div>
 
             <Button
               type="submit"
+              className="w-full"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded"
             >
-              {loading ? 'Đang xử lý...' : 'Đăng ký'}
+              {loading ? <Spinner className="mr-2" /> : null}
+              {loading ? 'Đang đăng ký...' : 'Đăng ký'}
             </Button>
           </form>
         </CardContent>
 
-        <CardFooter className="p-0 mt-4 justify-center">
-          <p>
+        <CardFooter className="justify-center">
+          <p className="text-sm text-gray-600">
             Đã có tài khoản?{' '}
-            <Link href="/auth/login" className="text-blue-600 hover:underline">
-              Đăng nhập
+            <Link
+              href="/auth/login"
+              className="font-medium text-indigo-600 hover:text-indigo-500"
+            >
+              Đăng nhập ngay
             </Link>
           </p>
         </CardFooter>

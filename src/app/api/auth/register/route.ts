@@ -1,49 +1,73 @@
 import { NextResponse } from 'next/server';
-import { AuthService } from '@/services/auth.service';
-import { UserServiceError } from '@/services/user.service';
-import { ValidationError } from '@/utils/validation';
-import type { RegisterData, AuthResponse } from '@/types/auth';
+import { hash } from 'bcrypt';
+import prisma from '@/lib/prisma';
+import { ValidationError } from '@/types/error';
+import { errorHandler } from '@/middleware/error-handler';
+import { validateRegisterData } from '@/utils/validation';
+import type { RegisterData } from '@/types/auth';
+
+const SALT_ROUNDS = 10;
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     
     const registerData: RegisterData = {
-      name: body.name,
       email: body.email,
-      password: body.password
+      password: body.password,
+      name: body.name,
+      phone: body.phone
     };
 
-    if (body.phone) {
-      registerData.phone = body.phone;
+    // Validate dữ liệu đầu vào
+    validateRegisterData.email(registerData.email);
+    validateRegisterData.password(registerData.password);
+    validateRegisterData.name(registerData.name);
+    if (registerData.phone) {
+      validateRegisterData.phone(registerData.phone);
     }
 
-    const response = await AuthService.registerServer(registerData);
+    // Kiểm tra email đã tồn tại
+    const existingUser = await prisma.user.findUnique({
+      where: { email: registerData.email }
+    });
 
-    return NextResponse.json<AuthResponse>({
+    if (existingUser) {
+      throw new ValidationError('Email đã được sử dụng', 409, 'email');
+    }
+
+    // Hash password
+    const hashedPassword = await hash(registerData.password, SALT_ROUNDS);
+
+    // Tạo user mới
+    const user = await prisma.user.create({
+      data: {
+        email: registerData.email,
+        password: hashedPassword,
+        name: registerData.name,
+        phone: registerData.phone,
+        status: 'active',
+        role: 'user',
+        loginAttempts: 0
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        role: true,
+        status: true,
+        createdAt: true
+      }
+    });
+
+    return NextResponse.json({
       success: true,
       message: 'Đăng ký thành công',
-      user: response.user
+      user
     });
 
   } catch (error) {
-    if (error instanceof UserServiceError || error instanceof ValidationError) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: error.message 
-        },
-        { status: error.status }
-      );
-    }
-
-    console.error('Register error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Có lỗi xảy ra khi đăng ký' 
-      },
-      { status: 500 }
-    );
+    return errorHandler(error);
   }
 } 

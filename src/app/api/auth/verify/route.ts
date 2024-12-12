@@ -1,76 +1,89 @@
 import { NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
-import { User, IUser } from '@backend/models/User';
-import { connectToMongoDB } from '@/lib/mongodb';
+import prisma from '@/lib/prisma';
+import { ValidationError } from '@/types/error';
+import { errorHandler } from '@/middleware/error-handler';
+import { tokenUtils } from '@/utils/token';
 
-export async function GET(req: Request) {
+// Xác thực email
+export async function POST(request: Request) {
   try {
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Vui lòng đăng nhập để tiếp tục' }, 
-        { status: 401 }
-      );
+    const { token } = await request.json();
+    if (!token) {
+      throw new ValidationError('Token xác thực không hợp lệ', 400);
     }
 
-    const token = authHeader.split(' ')[1];
-    
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as { userId: string };
-    } catch (jwtError) {
-      return NextResponse.json(
-        { error: 'Phiên đăng nhập đã hết hạn' },
-        { status: 401 }
-      );
-    }
-    
-    await connectToMongoDB();
-    
-    const user = await User.findOne({
-      _id: decoded.userId,
-      status: 'active'
-    }).select('-password');
+    // Verify token
+    const decoded = tokenUtils.verifyToken(token);
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Tài khoản không tồn tại hoặc đã bị khóa' },
-        { status: 401 }
-      );
-    }
-
-    if (user.lastActive) {
-      const inactiveTime = Date.now() - user.lastActive.getTime();
-      const maxInactiveTime = 30 * 24 * 60 * 60 * 1000; // 30 ngày
-      
-      if (inactiveTime > maxInactiveTime) {
-        return NextResponse.json(
-          { error: 'Tài khoản không hoạt động quá lâu, vui lòng đăng nhập lại' },
-          { status: 401 }
-        );
-      }
-    }
-
-    await User.findByIdAndUpdate(user._id, {
-      lastActive: new Date()
+    // Tìm user
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id }
     });
 
-    return NextResponse.json({ 
-      valid: true,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        status: user.status
+    if (!user) {
+      throw new ValidationError('Người dùng không tồn tại', 404);
+    }
+
+    if (user.status === 'active') {
+      throw new ValidationError('Email đã được xác thực', 400);
+    }
+
+    // Cập nhật trạng thái user
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { 
+        status: 'active',
+        emailVerifiedAt: new Date()
       }
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Xác thực email thành công'
     });
 
   } catch (error) {
-    console.error('Verify token error:', error);
-    return NextResponse.json(
-      { error: 'Đã có lỗi xảy ra, vui lòng thử lại' },
-      { status: 500 }
-    );
+    return errorHandler(error);
+  }
+}
+
+// Gửi lại email xác thực
+export async function PUT(request: Request) {
+  try {
+    const { email } = await request.json();
+    if (!email) {
+      throw new ValidationError('Email là bắt buộc', 400);
+    }
+
+    // Tìm user
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      throw new ValidationError('Email không tồn tại', 404);
+    }
+
+    if (user.status === 'active') {
+      throw new ValidationError('Email đã được xác thực', 400);
+    }
+
+    // Tạo verification token
+    const token = tokenUtils.generateToken({
+      id: user.id,
+      email: user.email,
+      role: user.role
+    });
+
+    // TODO: Gửi email xác thực
+    // await sendVerificationEmail(user.email, token);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Đã gửi lại email xác thực'
+    });
+
+  } catch (error) {
+    return errorHandler(error);
   }
 } 

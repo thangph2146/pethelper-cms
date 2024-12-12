@@ -13,7 +13,17 @@ export interface IUser {
   updatedAt: Date;
 }
 
-export type SafeUser = Omit<IUser, 'password'>;
+export interface SafeUser {
+  id: string;
+  email: string;
+  name?: string | null;
+  image?: string | null;
+  role: string;
+  status: string;
+  lastLoginAt?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface UserResponse {
   users: SafeUser[];

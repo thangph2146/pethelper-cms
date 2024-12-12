@@ -1,87 +1,191 @@
-import axiosInstance from '@/utils/axiosInstance';
-import type { IUser } from '@/backend/models/User';
-import { UserService } from '@/services/user.service';
+import { LoginData, LoginResponse, RegisterData, ValidateSessionResponse } from '@/types/auth';
+import { validateLoginData, validateRegisterData } from '@/utils/validation';
+import axios from '@/utils/axios';
+import { ValidationError } from '@/types/error';
 
-interface LoginData {
-  email: string;
-  password: string;
-}
+export class AuthService {
+  static async login(loginData: LoginData): Promise<LoginResponse> {
+    try {
+      // Validate dữ liệu đầu vào
+      validateLoginData.email(loginData.email);
+      validateLoginData.password(loginData.password);
 
-export interface RegisterData {
-  name: string;
-  email: string;
-  password: string;
-  phone?: string;
-}
+      const { data } = await axios.post<LoginResponse>('/api/auth/login', loginData);
 
-interface AuthResponse {
-  user: IUser;
-  token: string;
-}
+      if (!data.success) {
+        throw new ValidationError(data.message);
+      }
 
-export const AuthService = {
-  // Đăng nhập
-   login: async (data: LoginData) => {
-    const response = await axiosInstance.post<AuthResponse>('/api/auth/login', data);
-    return response.data;
-  },
+      // Lưu token và user info vào localStorage
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
 
-  // Đăng ký - phiên bản client
-  register: async (data: RegisterData) => {
-    const response = await axiosInstance.post<AuthResponse>('/api/auth/register', data);
-    return response.data;
-  },
+      // Cập nhật token cho axios instance
+      axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
 
-  // Đăng ký - phiên bản server
-  registerServer: async (data: RegisterData) => {
-    const user = await UserService.createUser(data);
-    
-    return {
-      success: true,
-      message: 'Đăng ký thành công',
-      user
-    };
-  },
+      // Tạo session sau khi login thành công
+      await this.createSession(data.token);
 
-  // Đăng xuất
-  logout: async () => {
-    const response = await axiosInstance.post('/api/auth/logout');
-    return response.data;
-  },
+      return data;
+    } catch (error: any) {
+      if (error.response) {
+        switch (error.response.status) {
+          case 401:
+            throw new ValidationError(error.response.data.message, 401, 'form');
+          case 403:
+            throw new ValidationError('Tài khoản bị khóa', 403, 'form');
+          case 429:
+            throw new ValidationError(error.response.data.message, 429, 'form');
+          default:
+            throw new ValidationError(error.response.data.message || 'Có lỗi xảy ra khi đăng nhập', 500, 'form');
+        }
+      }
+      throw error;
+    }
+  }
 
-  // Lấy thông tin user hiện tại
-  getCurrentUser: async () => {
-    const response = await axiosInstance.get<IUser>('/api/auth/me');
-    return response.data;
-  },
+  static async createSession(token: string): Promise<void> {
+    try {
+      const deviceInfo = this.getDeviceInfo();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // Token hết hạn sau 7 ngày
 
-  // Cập nhật thông tin user
-  updateProfile: async (data: FormData) => {
-    const response = await axiosInstance.put<IUser>('/api/auth/me', data, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
-  },
+      await axios.post('/api/auth/session', {
+        token,
+        deviceInfo,
+        expiresAt
+      });
+    } catch (error) {
+      console.error('Create session error:', error);
+    }
+  }
 
-  // Đổi mật khẩu
-  changePassword: async (data: { currentPassword: string; newPassword: string }) => {
-    const response = await axiosInstance.put('/api/auth/password', data);
-    return response.data;
-  },
+  static async validateSession(): Promise<boolean> {
+    try {
+      const token = this.getToken();
+      if (!token) return false;
 
-  // Quên mật khẩu
-  forgotPassword: async (email: string) => {
-    const response = await axiosInstance.post('/api/auth/forgot-password', { email });
-    return response.data;
-  },
+      const { data } = await axios.get<ValidateSessionResponse>('/api/auth/session');
+      return data.status;
+    } catch (error) {
+      this.logout();
+      return false;
+    }
+  }
 
-  // Reset mật khẩu
-  resetPassword: async (token: string, password: string) => {
-    const response = await axiosInstance.post(`/api/auth/reset-password/${token}`, {
-      password,
-    });
-    return response.data;
-  },
+  static async logout(): Promise<void> {
+    try {
+      const token = this.getToken();
+      if (token) {
+        await axios.delete('/api/auth/session');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      delete axios.defaults.headers.common['Authorization'];
+    }
+  }
+
+  static getToken(): string | null {
+    return localStorage.getItem('token');
+  }
+
+  static getCurrentUser() {
+    const userStr = localStorage.getItem('user');
+    if (!userStr) return null;
+    return JSON.parse(userStr);
+  }
+
+  static getDeviceInfo(): string {
+    const userAgent = window.navigator.userAgent;
+    const platform = window.navigator.platform;
+    return `${platform} - ${userAgent}`;
+  }
+
+  static async register(registerData: RegisterData): Promise<void> {
+    try {
+      // Validate dữ liệu đầu vào
+      validateRegisterData.name(registerData.name);
+      validateRegisterData.email(registerData.email);
+      validateRegisterData.password(registerData.password);
+      if (registerData.phone) {
+        validateRegisterData.phone(registerData.phone);
+      }
+
+      const { data } = await axios.post('/api/auth/register', registerData);
+
+      if (!data.success) {
+        throw new ValidationError(data.message);
+      }
+    } catch (error: any) {
+      if (error.response) {
+        switch (error.response.status) {
+          case 409:
+            throw new ValidationError('Email đã được sử dụng', 409, 'email');
+          default:
+            throw new ValidationError(
+              error.response.data.message || 'Có lỗi xảy ra khi đăng ký',
+              error.response.status,
+              'form'
+            );
+        }
+      }
+      throw error;
+    }
+  }
+
+  static isAuthenticated(): boolean {
+    const token = this.getToken();
+    return !!token;
+  }
+
+  static hasRole(role: string): boolean {
+    const user = this.getCurrentUser();
+    return user?.role === role;
+  }
+
+  static isActive(): boolean {
+    const user = this.getCurrentUser();
+    return user?.status === 'active';
+  }
+
+  static async verifyEmail(token: string): Promise<void> {
+    try {
+      const { data } = await axios.post('/api/auth/verify', { token });
+      
+      if (!data.success) {
+        throw new ValidationError(data.message);
+      }
+    } catch (error: any) {
+      if (error.response) {
+        throw new ValidationError(
+          error.response.data.message || 'Có lỗi xảy ra khi xác thực email',
+          error.response.status,
+          'form'
+        );
+      }
+      throw error;
+    }
+  }
+
+  static async resendVerification(email: string): Promise<void> {
+    try {
+      const { data } = await axios.post('/api/auth/verify/resend', { email });
+      
+      if (!data.success) {
+        throw new ValidationError(data.message);
+      }
+    } catch (error: any) {
+      if (error.response) {
+        throw new ValidationError(
+          error.response.data.message || 'Có lỗi xảy ra khi gửi lại email xác thực',
+          error.response.status,
+          'form'
+        );
+      }
+      throw error;
+    }
+  }
 }

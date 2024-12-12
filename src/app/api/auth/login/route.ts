@@ -1,134 +1,115 @@
 import { NextResponse } from 'next/server';
-import { connectToMongoDB } from '@/lib/mongodb';
-import { User, IUser } from '@backend/models/User';
-import jwt from 'jsonwebtoken';
+import { compare } from 'bcrypt';
+import prisma from '@/lib/prisma';
+import { ValidationError } from '@/types/error';
+import { errorHandler } from '@/middleware/error-handler';
+import { tokenUtils } from '@/utils/token';
+import type { LoginData } from '@/types/auth';
 
-const handler = async (req: Request) => {
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCK_TIME = 15 * 60 * 1000; // 15 phút
+
+export async function POST(request: Request) {
   try {
-    if (!process.env.MONGODB_URI) {
-      throw new Error('MONGODB_URI chưa được cấu hình');
-    }
-
-    try {
-      await Promise.race([
-        connectToMongoDB(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Kết nối MongoDB quá thời gian')), 30000)
-        )
-      ]);
-    } catch (error: any) {
-      console.error('Lỗi kết nối MongoDB:', error);
-      return NextResponse.json(
-        { 
-          error: 'Không thể kết nối đến cơ sở dữ liệu',
-          details: error.message 
-        },
-        { status: 503 }
-      );
-    }
+    const body = await request.json();
     
-    const { email, password } = await req.json();
-    
-    if (!email || !password) {
-      return NextResponse.json(
-        { error: 'Email và mật khẩu là bắt buộc' },
-        { status: 400 }
-      );
-    }
+    const loginData: LoginData = {
+      email: body.email,
+      password: body.password
+    };
 
-    const user = await User.findOne({ email })
-      .select('+password')
-      .maxTimeMS(5000);
+    // Kiểm tra user có tồn tại
+    const user = await prisma.user.findUnique({
+      where: { email: loginData.email },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        name: true,
+        role: true,
+        status: true,
+        loginAttempts: true,
+        lockUntil: true
+      }
+    });
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'Email hoặc mật khẩu không chính xác' },
-        { status: 401 }
-      );
+      throw new ValidationError('Email hoặc mật khẩu không chính xác', 401, 'form');
     }
 
     // Kiểm tra trạng thái tài khoản
     if (user.status === 'banned') {
-      return NextResponse.json(
-        { error: 'Tài khoản đã bị khóa vĩnh viễn' },
-        { status: 401 }
-      );
-    }
-
-    if (user.status === 'inactive') {
-      return NextResponse.json(
-        { error: 'Tài khoản chưa được kích hoạt' },
-        { status: 401 }
-      );
+      throw new ValidationError('Tài khoản đã bị khóa', 403, 'form');
     }
 
     // Kiểm tra khóa tạm thời
     if (user.lockUntil && user.lockUntil > new Date()) {
       const remainingTime = Math.ceil((user.lockUntil.getTime() - Date.now()) / 1000 / 60);
-      return NextResponse.json(
-        { error: `Tài khoản tạm thời bị khóa, vui lòng thử lại sau ${remainingTime} phút` },
-        { status: 429 }
+      throw new ValidationError(
+        `Tài khoản tạm thời bị khóa, vui lòng thử lại sau ${remainingTime} phút`,
+        429,
+        'form'
       );
     }
 
-    // Kiểm tra mật khẩu
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
+    // Kiểm tra password
+    const isValidPassword = await compare(loginData.password, user.password);
+    if (!isValidPassword) {
       // Tăng số lần đăng nhập thất bại
-      user.loginAttempts += 1;
+      const loginAttempts = (user.loginAttempts || 0) + 1;
       
-      // Khóa tài khoản tạm thời nếu sai quá 5 lần
-      if (user.loginAttempts >= 5) {
-        user.lockUntil = new Date(Date.now() + 15 * 60 * 1000); // khóa 15 phút
-        await user.save();
-        return NextResponse.json(
-          { error: 'Đăng nhập sai quá nhiều lần, tài khoản bị khóa 15 phút' },
-          { status: 429 }
-        );
-      }
-      
-      await user.save();
+      // Khóa tài khoản nếu vượt quá số lần cho phép
+      const lockUntil = loginAttempts >= MAX_LOGIN_ATTEMPTS 
+        ? new Date(Date.now() + LOCK_TIME)
+        : null;
 
-      return NextResponse.json(
-        { error: `Email hoặc mật khẩu không chính xác (còn ${5 - user.loginAttempts} lần thử)` },
-        { status: 401 }
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { 
+          loginAttempts,
+          lockUntil
+        }
+      });
+
+      if (lockUntil) {
+        throw new ValidationError('Đăng nhập sai quá nhiều lần, tài khoản bị khóa 15 phút', 429, 'form');
+      }
+
+      throw new ValidationError(
+        `Email hoặc mật khẩu không đúng (còn ${MAX_LOGIN_ATTEMPTS - loginAttempts} lần thử)`,
+        401,
+        'form'
       );
     }
 
-    // Reset số lần đăng nhập thất bại và cập nhật thời gian hoạt động
-    user.loginAttempts = 0;
-    user.lockUntil = undefined;
-    user.lastActive = new Date();
-    await user.save();
-
-    // Tạo JWT token
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '1d' }
-    );
-
-    return NextResponse.json({ 
-      token,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        status: user.status
+    // Reset login attempts sau khi đăng nhập thành công
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        loginAttempts: 0,
+        lockUntil: null,
+        lastLoginAt: new Date()
       }
     });
 
-  } catch (error: any) {
-    console.error('Chi tiết lỗi đăng nhập:', error);
-    return NextResponse.json(
-      { 
-        error: 'Đã có lỗi xảy ra khi đăng nhập!',
-        details: error.message 
-      },
-      { status: 500 }
-    );
-  }
-};
+    // Tạo token
+    const token = tokenUtils.generateToken({
+      id: user.id,
+      email: user.email,
+      role: user.role
+    });
 
-export { handler as POST }; 
+    // Loại bỏ các thông tin nhạy cảm
+    const { password: _, loginAttempts: __, lockUntil: ___, ...safeUser } = user;
+
+    return NextResponse.json({
+      success: true,
+      message: 'Đăng nhập thành công',
+      user: safeUser,
+      token
+    });
+
+  } catch (error) {
+    return errorHandler(error);
+  }
+} 

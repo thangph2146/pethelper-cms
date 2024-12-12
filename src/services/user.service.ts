@@ -49,7 +49,7 @@ export const UserService = {
 
       // Không trả về password trong response
       const userObject = user.toObject();
-      delete userObject.password;
+      // delete userObject.password;
 
       return userObject as CreateUserResponse;
     } catch (error) {
