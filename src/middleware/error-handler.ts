@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ValidationError, AuthenticationError, AuthorizationError } from '@/types/error';
-import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 export function errorHandler(error: any) {
   console.error('API Error:', error);
@@ -40,14 +40,14 @@ export function errorHandler(error: any) {
   }
 
   // Xử lý Prisma errors
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+  if (error instanceof PrismaClientKnownRequestError) {
     switch (error.code) {
       case 'P2002': // Unique constraint failed
         return NextResponse.json(
           {
             success: false,
             message: 'Dữ liệu đã tồn tại',
-            field: error.meta?.target?.[0]
+            field: error.meta?.target as string
           },
           { status: 409 }
         );
