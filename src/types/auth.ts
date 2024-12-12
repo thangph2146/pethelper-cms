@@ -20,11 +20,15 @@ export interface AuthResponse {
   error: AuthError | null;
 }
 
+
 export interface SessionResponse {
-  session: {
-    user: User;
-    access_token: string;
-    refresh_token: string;
+  session: any;
+  user?: any; // Add the user property
+  error: {
+    message: string;
+    code: string;
+    details?: {
+      message: string;
+    };
   } | null;
-  error: AuthError | null;
-} 
+}

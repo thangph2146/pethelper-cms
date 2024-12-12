@@ -7,7 +7,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardFooter } from '@/componen
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/form/form-field';
 import { AuthService } from '@/services/auth.service';
-import type { RegisterFormData, RegisterError } from '@/types/form';
+import type { RegisterError, RegisterFormData } from '@/types/form';
 import { toast } from 'react-hot-toast';
 
 export default function RegisterPage() {
@@ -15,7 +15,8 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState<RegisterFormData>({
     email: '',
     password: '',
-    name: ''
+    name: '', 
+    confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<RegisterError | null>(null);
@@ -27,7 +28,7 @@ export default function RegisterPage() {
       [name]: value
     }));
     // Clear error khi user thay đổi input
-    if (error && error.field === name) {
+    if (error && error[name as keyof RegisterError] === name) {
       setError(null);
     }
   };
@@ -36,16 +37,15 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await AuthService.register(formData);
+      await AuthService.signUp(formData);
       toast.success('Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.');
       router.push('/auth/login?verify=pending');
     } catch (err: unknown) {
       const error: RegisterError = {
-        message: err instanceof Error ? err.message : 'Unknown error',
-        code: 'REGISTER_ERROR'
+        email: err instanceof Error ? err.message : 'Unknown error',
       };
       setError(error);
-      toast.error(error.message);
+      toast.error(error.email || 'Đăng ký thất bại');
     } finally {
       setLoading(false);
     }
@@ -61,7 +61,7 @@ export default function RegisterPage() {
         <CardContent>
           {error && (
             <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
-              {error.message}
+              {error.email}
             </div>
           )}
 
@@ -73,7 +73,7 @@ export default function RegisterPage() {
               type="email"
               value={formData.email}
               onChange={handleChange}
-              error={error && error.field === 'email' ? error.message : undefined}
+              error={error && error.email ? error.email : undefined}
             />
 
             <FormField
@@ -82,7 +82,7 @@ export default function RegisterPage() {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              error={error && error.field === 'name' ? error.message : undefined}
+              error={error && error.name ? error.name : undefined}
             />
 
             <FormField
@@ -92,7 +92,7 @@ export default function RegisterPage() {
               type="password"
               value={formData.password}
               onChange={handleChange}
-              error={error && error.field === 'password' ? error.message : undefined}
+              error={error && error.password ? error.password : undefined}
             />
 
             <FormField
@@ -102,7 +102,7 @@ export default function RegisterPage() {
               type="password"
               value={formData.confirmPassword}
               onChange={handleChange}
-              error={error && error.field === 'confirmPassword' ? error.message : undefined}
+              error={error && error.confirmPassword ? error.confirmPassword : undefined}
             />
 
             <Button

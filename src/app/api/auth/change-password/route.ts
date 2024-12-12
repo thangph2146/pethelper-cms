@@ -30,17 +30,19 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
 
-    return NextResponse.json<ApiResponse>({ 
+    return NextResponse.json<ApiResponse<{ message: string }>>({ 
       success: true,
       message: 'Password changed successfully'
     });
 
   } catch (error: unknown) {
-    return NextResponse.json<ApiResponse>({
+    return NextResponse.json<ApiResponse<{ message: string }>>({
       success: false,
       error: {
         code: 'CHANGE_PASSWORD_ERROR',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        details: {
+          message: error instanceof Error ? error.message : 'Unknown error'
+        }
       }
     }, { status: 500 });
   }

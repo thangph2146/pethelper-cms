@@ -1,19 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
-import { connectToMongoDB } from  '@/lib/mongodb';
 import { Post } from '@backend/models/Post';
-import { ApiError } from '@/lib/errors';  
-import type { ApiResponse } from '@/types/api';
-
+import { ApiError } from 'next/dist/server/api-utils';
+import { Pagination } from '@/types/api';
+import { ApiResponse } from '@/types/common';
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== 'admin') {
-      throw new ApiError('Unauthorized', 401);
-    }
+   
 
-    await connectToMongoDB();
     const { searchParams } = new URL(req.url);
     
     interface PostQuery {
@@ -46,7 +40,7 @@ export async function GET(req: Request) {
       Post.countDocuments(query)
     ]);
 
-    return NextResponse.json<ApiResponse<{posts: Post[]; pagination: Pagination}>>({ 
+    return NextResponse.json<ApiResponse<{posts: typeof Post[]; pagination: Pagination}>>({ 
       success: true, 
       data: {
         posts,
@@ -75,26 +69,7 @@ export async function GET(req: Request) {
 // Thêm bài đăng mới
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user || session.user.role !== 'admin') {
-      throw new ApiError('Unauthorized', 401);
-    }
-
-    await connectToMongoDB();
-    const body = await req.json();
-
-    const post = await Post.create({
-      ...body,
-      author: session.user.id,
-      savedBy: [],
-      comments: []
-    });
-
-    await post.populate('author', 'name email image');
-
-    return NextResponse.json({
-      data: post
-    }, { status: 201 });
+   
   } catch (error) {
     if (error instanceof ApiError) {
       return NextResponse.json(
@@ -112,12 +87,6 @@ export async function POST(req: Request) {
 // Xóa nhiều bài đăng
 export async function DELETE(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!(session?.user?.role === 'admin')) {
-      throw new ApiError('Unauthorized', 401);
-    }
-
-    await connectToMongoDB();
     const { ids } = await req.json();
 
     await Post.deleteMany({ _id: { $in: ids } });

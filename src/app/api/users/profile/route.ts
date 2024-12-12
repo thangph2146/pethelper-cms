@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import type { Profile, ApiError } from '@/types/supabase';
+import { cookies } from 'next/headers';
 
 export async function GET() {
   try {
@@ -29,13 +29,13 @@ export async function GET() {
       throw profileError;
     }
 
-    return NextResponse.json<Profile>(profile);
+    return NextResponse.json(profile);
   } catch (error: unknown) {
-    const apiError: ApiError = {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      code: 'PROFILE_ERROR'
-    };
-    console.error('Profile error:', apiError);
-    return NextResponse.json({ error: apiError }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Profile error:', message);
+    return NextResponse.json(
+      { error: { message, code: 'PROFILE_ERROR' } },
+      { status: 500 }
+    );
   }
 } 

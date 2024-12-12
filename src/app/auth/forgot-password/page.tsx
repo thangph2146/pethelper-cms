@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/form/form-field';
 import { AuthService } from '@/services/auth.service';
 import type { ApiError } from '@/types/error';
+import { toast } from 'react-hot-toast';
 
 interface ForgotPasswordError extends ApiError {
   field?: string;
@@ -31,7 +32,7 @@ export default function ForgotPasswordPage() {
 
     setLoading(true);
     try {
-      await AuthService.forgotPassword(email);
+      await AuthService.forgotPassword(email);  
       toast.success('Email khôi phục mật khẩu đã được gửi');
       router.push('/auth/login?reset=requested');
     } catch (err: unknown) {
@@ -71,7 +72,7 @@ export default function ForgotPasswordPage() {
                 setError(null);
               }}
               placeholder="Nhập email của bạn"
-              error={error}
+              error={error?.message}
             />
 
             <Button

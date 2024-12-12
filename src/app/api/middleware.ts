@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import jwt from 'jsonwebtoken';
-import type { ApiError } from '@/lib/errors';
+import { ApiError } from 'next/dist/server/api-utils';
 
 // Định nghĩa interface cho decoded JWT payload
 interface JWTPayload {
@@ -62,7 +62,7 @@ export function withErrorHandler<T>(handler: (req: Request) => Promise<T>) {
         return NextResponse.json(
           { error: error.message },
           { status: error.statusCode }
-        );
+        );  
       }
       return NextResponse.json(
         { error: 'Internal Server Error' },

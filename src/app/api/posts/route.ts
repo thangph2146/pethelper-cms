@@ -20,6 +20,11 @@ export async function GET() {
     return NextResponse.json(posts);
 
   } catch (error) {
-    return errorHandler(error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Post error:', message);
+    return NextResponse.json(
+      { error: { message, code: 'POST_ERROR' } },
+      { status: 500 }
+    );
   }
 } 

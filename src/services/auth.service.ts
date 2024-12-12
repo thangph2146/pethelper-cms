@@ -107,4 +107,14 @@ export class AuthService {
       throw new Error(authError.message || 'Lấy thông tin session thất bại');
     }
   }
+
+  static async forgotPassword(email: string): Promise<void> {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+    } catch (error: unknown) {
+      const authError = error as AuthError;
+      throw new Error(authError.message || 'Gửi email khôi phục mật khẩu thất bại');
+    }
+  }
 }

@@ -1,8 +1,5 @@
-import { connectDB } from '@/lib/mongodb';
 import { Post } from '@backend/models/Post';
-import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
-import { authOptions } from '@/lib/auth';
 import { Types } from 'mongoose';
 
 export async function POST(
@@ -10,13 +7,8 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json(
-        { message: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+
+
 
     const { content } = await req.json();
     if (!content) {
@@ -26,7 +18,6 @@ export async function POST(
       );
     }
 
-    await connectDB();
     const post = await Post.findById(params.id);
     
     if (!post) {
@@ -36,12 +27,7 @@ export async function POST(
       );
     }
 
-    post.comments.push({
-      user: new Types.ObjectId(session.user.id),
-      content,
-      createdAt: new Date(),
-    });
-
+   
     await post.save();
 
     const populatedPost = await Post.findById(params.id)
@@ -70,7 +56,6 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    await connectDB();
     const post = await Post.findById(params.id)
       .populate('comments.userId', 'name image');
 

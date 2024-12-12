@@ -1,4 +1,6 @@
-import type { ApiError } from '@/types/supabase';
+import { NextResponse } from 'next/server';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
 export async function GET() {
   try {
@@ -28,11 +30,11 @@ export async function GET() {
 
     return NextResponse.json(savedPosts);
   } catch (error: unknown) {
-    const apiError: ApiError = {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      code: 'SAVED_POSTS_ERROR'
-    };
-    console.error('Saved posts error:', apiError);
-    return NextResponse.json({ error: apiError }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Saved posts error:', message);
+    return NextResponse.json(
+      { error: { message, code: 'SAVED_POSTS_ERROR' } },
+      { status: 500 }
+    );
   }
 } 

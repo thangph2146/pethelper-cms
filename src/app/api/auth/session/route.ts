@@ -6,7 +6,7 @@ import type { SessionResponse } from '@/types/auth';
 export async function GET(): Promise<Response> {
   try {
     const supabase = createRouteHandlerClient({ cookies });
-    
+
     // Lấy session hiện tại
     const { data: { session }, error } = await supabase.auth.getSession();
 
@@ -26,14 +26,14 @@ export async function GET(): Promise<Response> {
         console.error('Lỗi khi lấy thông tin user:', userError);
       }
 
-      return NextResponse.json<SessionResponse>({ 
+      return NextResponse.json<SessionResponse>({
         session,
         user: userData,
         error: null
       });
     }
 
-    return NextResponse.json<SessionResponse>({ 
+    return NextResponse.json<SessionResponse>({
       session: null,
       error: null
     });
@@ -41,12 +41,12 @@ export async function GET(): Promise<Response> {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Đã có lỗi xảy ra khi lấy thông tin session';
     return NextResponse.json<SessionResponse>(
-      { 
+      {
         error: {
           message,
           code: 'SESSION_ERROR'
         },
-        session: null 
+        session: null
       },
       { status: 500 }
     );
