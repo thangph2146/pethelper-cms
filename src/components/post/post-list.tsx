@@ -6,7 +6,7 @@ import { PostCard } from './post-card';
 import { Spinner } from '@/components/ui/spinner';
 import { useInfinitePosts } from '@/hooks/use-infinite-posts';
 import { PostService } from '@/services/post.service';
-import type { IPost } from '@backend/models/Post';
+import type { IPost } from '@/types/post';
 
 interface PostListProps {
   filters?: {
@@ -18,12 +18,12 @@ interface PostListProps {
 
 export function PostList({ filters }: PostListProps) {
   const { ref, inView } = useInView();
-  const { 
-    data, 
-    status, 
-    fetchNextPage, 
-    hasNextPage, 
-    isFetchingNextPage 
+  const {
+    data,
+    status,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
   } = useInfinitePosts({ filters });
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export function PostList({ filters }: PostListProps) {
       {data.pages.map((page, i) => (
         <div key={i} className="space-y-6">
           {page.posts.map((post: IPost) => (
-            <PostCard 
+            <PostCard
               key={post._id}
               post={post}
               onLike={() => handleLike(post._id)}
@@ -94,7 +94,7 @@ export function PostList({ filters }: PostListProps) {
           </div>
         )}
       </div>
-      
+
       {!hasNextPage && data.pages[0].posts.length > 0 && (
         <p className="text-center text-gray-500">
           Không còn bài đăng nào khác

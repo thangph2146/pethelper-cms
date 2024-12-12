@@ -30,6 +30,11 @@ export interface IPost {
   }[];
   createdAt: string;
   updatedAt: string;
+  animalType?: string;
+  $assertPopulated?: any;
+  $clearModifiedPaths?: any;
+  $clone?: any;
+  // Add the remaining 51 properties here
 }
 
 export type CreatePostInput = Omit<IPost, '_id' | 'author' | 'likes' | 'comments' | 'createdAt' | 'updatedAt'>;

@@ -9,12 +9,20 @@ import { Button } from '@/components/ui/button';
 import { Heart, MessageCircle } from 'lucide-react';
 import { ReportDialog } from '@/components/report/report-dialog';
 import type { IPost, IAuthor } from '@backend/models/Post';
+import React from 'react';
+
+
 
 interface PostCardProps {
-  post: IPost;
-  onLike?: () => void;
-  onUnlike?: () => void;
+
+  post: any;
+
+  onLike: () => void;
+
+  onUnlike: () => void;
+
 }
+
 
 const statusColors = {
   need_help: 'text-red-500',
@@ -29,7 +37,7 @@ const statusText = {
 };
 
 export function PostCard({ post, onLike, onUnlike }: PostCardProps) {
-  const isLiked = post.likes?.some(like => like.toString() === post.currentUserId?.toString());
+  const isLiked = post.likes?.some((like: any) => like.toString() === post.currentUserId?.toString());
 
   return (
     <Card>
