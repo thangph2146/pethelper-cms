@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import type { UsePostInteractionsHandlers } from './use-post-interactions-handlers';
 
-export interface UsePostLoading {
+export interface PostLoadingState {
   isLoading: boolean;
   isDeleting: boolean;
   isStarring: boolean;
@@ -8,18 +8,28 @@ export interface UsePostLoading {
   isSaving: boolean;
 }
 
-export const usePostLoading = (
-  isInteractionsLoading: boolean,
-  isDeleting: boolean,
-  isStarring: boolean,
-  isLikeLoading: boolean,
-  isSaving: boolean
-): UsePostLoading => {
-  return useMemo(() => ({
+export interface UsePostLoadingConfig {
+  isInteractionsLoading: boolean;
+  isDeleting: boolean;
+  isStarring: boolean;
+  isLikeLoading: boolean;
+  isSaving: boolean;
+}
+
+export const usePostLoading = (config: UsePostLoadingConfig): PostLoadingState => {
+  const {
+    isInteractionsLoading,
+    isDeleting,
+    isStarring,
+    isLikeLoading,
+    isSaving
+  } = config;
+
+  return {
     isLoading: isInteractionsLoading,
     isDeleting,
     isStarring,
-    isLikeLoading: isLikeLoading || isInteractionsLoading,
+    isLikeLoading,
     isSaving
-  }), [isInteractionsLoading, isDeleting, isStarring, isLikeLoading, isSaving]);
+  };
 }; 

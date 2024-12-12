@@ -1,24 +1,38 @@
 import { useMemo } from 'react';
-import type { PostInteractions } from '@/types/post';
+import type { PostStats } from '@/types/post';
 
-export interface PostStats {
-  hasLiked: boolean;
-  hasCommented: boolean;
-  hasSaved: boolean;
-  likeCount: number;
-  commentCount: number;
-  saveCount: number;
+export interface UsePostStats {
+  stats: PostStats;
+  hasInteractions: boolean;
+  isLiked: boolean;
+  isSaved: boolean;
 }
 
-export const usePostStats = (interactions?: PostInteractions) => {
-  return useMemo(() => ({
-    stats: interactions || {
-      hasLiked: false,
-      hasCommented: false,
-      hasSaved: false,
-      likeCount: 0,
-      commentCount: 0,
-      saveCount: 0
-    } satisfies PostStats
+export const usePostStats = (
+  interactions: {
+    hasLiked: boolean;
+    hasSaved: boolean;
+    likeCount: number;
+    commentCount: number;
+    saveCount: number;
+  } | undefined
+): UsePostStats => {
+  const stats = useMemo<PostStats>(() => ({
+    likes: interactions?.likeCount || 0,
+    comments: interactions?.commentCount || 0,
+    saves: interactions?.saveCount || 0,
+    hasLiked: interactions?.hasLiked || false,
+    hasSaved: interactions?.hasSaved || false
   }), [interactions]);
+
+  const hasInteractions = useMemo(() => (
+    stats.likes > 0 || stats.comments > 0 || stats.saves > 0
+  ), [stats]);
+
+  return {
+    stats,
+    hasInteractions,
+    isLiked: stats.hasLiked,
+    isSaved: stats.hasSaved
+  };
 }; 

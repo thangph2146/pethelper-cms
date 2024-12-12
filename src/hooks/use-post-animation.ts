@@ -1,15 +1,21 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import type { MotionProps } from 'framer-motion';
 
-export const usePostAnimation = () => {
+export interface UsePostAnimation {
+  isHovered: boolean;
+  motionProps: MotionProps;
+}
+
+export const usePostAnimation = (): UsePostAnimation => {
   const [isHovered, setIsHovered] = useState(false);
 
-  const motionProps = {
+  const motionProps: MotionProps = {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0 },
     exit: { opacity: 0, y: -20 },
     transition: { duration: 0.2 },
-    onMouseEnter: () => setIsHovered(true),
-    onMouseLeave: () => setIsHovered(false)
+    onHoverStart: useCallback(() => setIsHovered(true), []),
+    onHoverEnd: useCallback(() => setIsHovered(false), [])
   };
 
   return {

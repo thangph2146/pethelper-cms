@@ -1,48 +1,47 @@
 'use client';
 
-import { memo, useMemo, useCallback } from 'react';
-import { Card } from '@/components/ui/card';
-import { useAuth } from '@/hooks/use-auth';
-import { usePostInteractions } from '@/hooks/use-post-interactions';
-import { useReadPosts } from '@/hooks/use-read-posts';
-import { useStarredPosts } from '@/hooks/use-starred-posts';
-import { motion } from 'framer-motion';
+// React & UI libs
+import { memo } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import type { PostCardProps, PostRenderProps } from '@/types/post';
 
-import { PostHeader } from './post/post-header';
-import { PostContent } from './post/post-content';
-import { PostFooter } from './post/post-footer';
-import { PostImages } from './post/post-images';
-import { usePostHandlers } from '@/hooks/use-post-handlers';
-import { usePostComputed } from '@/hooks/use-post-computed';
-import { usePostPreview } from '@/hooks/use-post-preview';
-import { usePostContent } from '@/hooks/use-post-content';
-import { usePostDialogs } from '@/hooks/use-post-dialogs';
-import { usePostStats } from '@/hooks/use-post-stats';
+// Types
+import type { PostCardProps } from '@/types/post';
 
-import { PostMenu } from '@/components/post/post-menu';
-import { usePostAnimation } from '@/hooks/use-post-animation';
-import { PostDialogs } from './post/post-dialogs';
-import { PostQuickActions } from './post/post-quick-actions';
-import { PostSkeleton } from './post/post-skeleton';
-import { PostError } from './post/post-error';
-import { usePostLoading } from '@/hooks/use-post-loading';
-import { usePostQuery } from '@/hooks/use-post-query';
-import { usePostView } from '@/hooks/use-post-view';
-import { PostRender } from './post/post-render';
+// Components
+import { PostErrorWrapper } from './post/post-error-wrapper';
+import { PostLoadingState } from './post/post-loading-state';
+import { PostMotionContainer } from './post/post-motion-container';
+import { PostContentWrapper } from './post/post-content-wrapper';
+
+// Hooks
 import { usePostCard } from '@/hooks/use-post-card';
-import { usePostError } from '@/hooks/use-post-error';
-import { usePostPreviewDialog } from '@/hooks/use-post-preview-dialog';
+import { usePostCardValidation } from '@/hooks/use-post-card-validation';
+import { usePostErrorHandling } from '@/hooks/use-post-error-handling';
+import { usePostHandlers } from '@/hooks/use-post-handlers';
+import { usePostCardProps } from '@/hooks/use-post-card-props';
+import { usePostContentProps } from '@/hooks/use-post-content-props';
 
-const PostCardErrorBoundary = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => (
-  <PostError 
-    error={error}
-    onRetry={resetErrorBoundary}
-  />
-);
+// Constants
+import { POST_CONFIG } from '@/constants/post-config';
 
-export const PostCard = memo(({ post }: PostCardProps) => {
+export const PostCard = memo(({ 
+  post,
+  className,
+  disableInteractions,
+  showPreview,
+  showQuickActions,
+  showMenu,
+  onCardClick
+}: PostCardProps) => {
+  // Validate props
+  const validatedProps = usePostCardValidation({
+    disableInteractions,
+    showPreview,
+    showQuickActions,
+    showMenu
+  });
+
+  // Core hooks
   const {
     view,
     loading,
@@ -50,56 +49,70 @@ export const PostCard = memo(({ post }: PostCardProps) => {
     renderProps,
     dialogs,
     motionProps
-  } = usePostCard(post);
-
-  const { resetError } = usePostError(post.id);
-
-  const previewDialog = usePostPreviewDialog(post, {
-    statusColor: view.header.statusColor,
-    urgencyColor: view.header.urgencyColor,
-    formattedDate: view.header.date
+  } = usePostCard(post, {
+    className,
+    ...validatedProps,
+    onCardClick
   });
 
-  // Early return for loading state
-  if (loading.isLoading) {
-    return <PostSkeleton />;
-  }
+  // Error and loading handling
+  const {
+    loadingStates,
+    setters,
+    isAnyLoading,
+    disableInteractions: disableState,
+    errorProps,
+    loadingProps
+  } = usePostErrorHandling(post.id, loading.isLoading);
 
-  // Memoize dialog render to prevent unnecessary re-renders
-  const renderDialogs = useMemo(() => (
-    <PostDialogs
-      post={post}
-      preview={previewDialog.preview}
-      dialogs={dialogs}
-      view={previewDialog.view}
-      loading={{
-        isDeleting: loading.isDeleting
-      }}
-      onDelete={handlers.handleDelete}
-    />
-  ), [
+  // Handlers
+  const {
+    interactionHandlers,
+    renderPropsWithHandlers
+  } = usePostHandlers({
+    postId: post.id,
+    renderProps,
+    handlers,
+    setters,
+    disabled: validatedProps.disableInteractions,
+    showQuickActions: validatedProps.showQuickActions,
+    showMenu: validatedProps.showMenu,
+    loadingStates
+  });
+
+  // Card props
+  const { cardProps, motionDivProps } = usePostCardProps({
     post,
-    previewDialog,
+    view,
+    handlers: interactionHandlers,
+    disableInteractions: disableState,
+    motionProps,
+    isAnyLoading,
+    testIds: POST_CONFIG.testIds
+  });
+
+  // Content props
+  const contentProps = usePostContentProps({
+    loadingStates,
+    cardProps,
+    renderProps: renderPropsWithHandlers,
+    showPreview: validatedProps.showPreview,
+    post,
+    view,
     dialogs,
-    loading.isDeleting,
-    handlers.handleDelete
-  ]);
+    handlers: interactionHandlers
+  });
 
   return (
-    <ErrorBoundary 
-      FallbackComponent={PostCardErrorBoundary}
-      onReset={resetError}
-    >
-      <motion.div {...motionProps}>
-        <Card 
-          className={view.className} 
-          onClick={handlers.handleCardClick}
-        >
-          <PostRender props={renderProps} />
-        </Card>
-        {renderDialogs}
-      </motion.div>
-    </ErrorBoundary>
+    <PostErrorWrapper {...errorProps}>
+      <PostLoadingState {...loadingProps}>
+        <PostMotionContainer motionProps={motionDivProps}>
+          <PostContentWrapper {...contentProps} />
+        </PostMotionContainer>
+      </PostLoadingState>
+    </PostErrorWrapper>
   );
 });
+
+PostCard.displayName = 'PostCard';
 

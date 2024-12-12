@@ -1,17 +1,22 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
-export const usePostContent = () => {
+export interface UsePostContent {
+  showContent: boolean;
+  toggleContent: () => void;
+  contentRef: React.RefObject<HTMLDivElement>;
+}
+
+export const usePostContent = (): UsePostContent => {
   const [showContent, setShowContent] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const toggleContent = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowContent(!showContent);
-  };
+  const toggleContent = useCallback(() => {
+    setShowContent(prev => !prev);
+  }, []);
 
   return {
     showContent,
-    contentRef,
-    toggleContent
+    toggleContent,
+    contentRef
   };
 }; 

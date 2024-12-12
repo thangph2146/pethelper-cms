@@ -26,12 +26,21 @@ export const usePostPreviewDialog = (
 ): UsePostPreviewDialog => {
   const preview = usePostPreview(post);
 
+  const handleImageClick = useCallback((image: string) => {
+    preview.setSelectedImage(image);
+  }, [preview]);
+
+  const handleQuickView = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    preview.setShowPreview(true);
+  }, [preview]);
+
   return {
     preview: {
       showPreview: preview.showPreview,
       selectedImage: preview.selectedImage,
-      handleQuickView: preview.handleQuickView,
-      handleImageClick: preview.handleImageClick,
+      handleQuickView,
+      handleImageClick,
       setShowPreview: preview.setShowPreview
     },
     view

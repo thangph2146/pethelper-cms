@@ -1,19 +1,20 @@
 import { memo } from 'react';
-import { MoreVertical, Trash2, Flag, Share } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { MoreVertical, Trash, Flag, Share } from 'lucide-react';
+import { POST_MENU_ACTIONS, POST_MENU_ITEMS } from '@/constants/post';
 
 interface PostMenuProps {
   isAuthor: boolean;
   onAction: (action: string) => void;
+  isLoading?: boolean;
 }
 
-export const PostMenu = memo(({ isAuthor, onAction }: PostMenuProps) => {
+export const PostMenu = memo(({ 
+  isAuthor, 
+  onAction,
+  isLoading 
+}: PostMenuProps) => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -21,36 +22,31 @@ export const PostMenu = memo(({ isAuthor, onAction }: PostMenuProps) => {
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          onClick={(e) => e.stopPropagation()}
+          disabled={isLoading}
         >
           <MoreVertical className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => onAction('share')}>
-          <Share className="h-4 w-4 mr-2" />
-          Chia sẻ
-        </DropdownMenuItem>
-        {isAuthor ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => onAction('delete')}
-              className="text-red-500 focus:text-red-500"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Xóa bài viết
-            </DropdownMenuItem>
-          </>
-        ) : (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onAction('report')}>
-              <Flag className="h-4 w-4 mr-2" />
-              Báo cáo
-            </DropdownMenuItem>
-          </>
+        {isAuthor && (
+          <DropdownMenuItem
+            onClick={() => onAction(POST_MENU_ACTIONS.DELETE)}
+            className="text-red-500 focus:text-red-500"
+          >
+            <Trash className="h-4 w-4 mr-2" />
+            {POST_MENU_ITEMS.DELETE}
+          </DropdownMenuItem>
         )}
+        {!isAuthor && (
+          <DropdownMenuItem onClick={() => onAction(POST_MENU_ACTIONS.REPORT)}>
+            <Flag className="h-4 w-4 mr-2" />
+            {POST_MENU_ITEMS.REPORT}
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem onClick={() => onAction(POST_MENU_ACTIONS.SHARE)}>
+          <Share className="h-4 w-4 mr-2" />
+          {POST_MENU_ITEMS.SHARE}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

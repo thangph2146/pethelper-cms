@@ -6,6 +6,8 @@ import { ShareDialog } from '@/components/share-dialog';
 import type { Post } from '@/types/post';
 import type { UsePostPreviewDialog } from '@/hooks/use-post-preview-dialog';
 import type { UsePostDialogs } from '@/hooks/use-post-dialogs';
+import { PostPreviewDialog } from '@/components/post/post-preview-dialog';
+import { usePostDialogActions } from '@/hooks/use-post-dialog-actions';
 
 export interface PostDialogProps {
   post: Post;
@@ -26,9 +28,11 @@ export const PostDialogs = memo(({
   loading,
   onDelete
 }: PostDialogProps) => {
+  const actions = usePostDialogActions(dialogs, onDelete);
+
   return (
     <>
-      <PostPreview
+      <PostPreviewDialog
         post={post}
         open={preview.showPreview}
         onOpenChange={preview.setShowPreview}
@@ -37,7 +41,10 @@ export const PostDialogs = memo(({
         {...view}
       />
 
-      <AlertDialog open={dialogs.showDeleteAlert} onOpenChange={dialogs.setShowDeleteAlert}>
+      <AlertDialog 
+        open={dialogs.showDeleteAlert} 
+        onOpenChange={dialogs.setShowDeleteAlert}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
@@ -46,9 +53,14 @@ export const PostDialogs = memo(({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={loading.isDeleting}>Hủy</AlertDialogCancel>
+            <AlertDialogCancel 
+              disabled={loading.isDeleting}
+              onClick={actions.handleClose}
+            >
+              Hủy
+            </AlertDialogCancel>
             <AlertDialogAction
-              onClick={onDelete}
+              onClick={actions.handleDelete}
               disabled={loading.isDeleting}
               className="bg-red-500 hover:bg-red-600"
             >
@@ -62,18 +74,21 @@ export const PostDialogs = memo(({
         open={dialogs.showReportDialog}
         onOpenChange={dialogs.setShowReportDialog}
         postId={post.id}
+        onClose={actions.handleClose}
       />
 
       <Comments
         postId={post.id}
         open={dialogs.showComments}
         onOpenChange={dialogs.setShowComments}
+        onClose={actions.handleClose}
       />
 
       <ShareDialog
         open={dialogs.showShareDialog}
         onOpenChange={dialogs.setShowShareDialog}
         post={post}
+        onClose={actions.handleClose}
       />
     </>
   );

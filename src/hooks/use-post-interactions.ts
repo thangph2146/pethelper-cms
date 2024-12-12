@@ -1,23 +1,46 @@
-import { useQuery } from '@tanstack/react-query';
-import { usePostService } from './use-post-service';
+import { useCallback } from 'react';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
+import { POST_MESSAGES } from '@/constants/post';
 
-export function usePostInteractions(postId: string) {
-  const { getInteractionStats } = usePostService();
+export const usePostInteractions = (postId: string) => {
+  const router = useRouter();
+  const { user } = useAuth();
 
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ['post-interactions', postId],
-    queryFn: () => getInteractionStats(postId),
-    staleTime: 1000 * 60 // 1 phút
-  });
+  const handleInteraction = useCallback(async (
+    action: () => Promise<void>,
+    requireAuth = true
+  ) => {
+    if (requireAuth && !user) {
+      router.push('/login');
+      return;
+    }
+
+    try {
+      await action();
+    } catch (error) {
+      console.error('Post interaction error:', error);
+      toast.error(POST_MESSAGES.errors.interaction);
+    }
+  }, [user, router]);
+
+  const handleShare = useCallback(async () => {
+    try {
+      await navigator.share({
+        title: 'Chia sẻ bài viết',
+        url: `/posts/${postId}`
+      });
+      toast.success(POST_MESSAGES.success.share);
+    } catch (error) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        toast.error(POST_MESSAGES.errors.share);
+      }
+    }
+  }, [postId]);
 
   return {
-    stats,
-    isLoading,
-    hasLiked: stats?.hasLiked || false,
-    hasCommented: stats?.hasCommented || false,
-    hasSaved: stats?.hasSaved || false,
-    likeCount: stats?.likeCount || 0,
-    commentCount: stats?.commentCount || 0,
-    saveCount: stats?.saveCount || 0
+    handleInteraction,
+    handleShare
   };
-} 
+}; 

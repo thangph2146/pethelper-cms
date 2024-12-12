@@ -1,72 +1,71 @@
 import { useCallback, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
-import { usePostService } from '@/hooks/use-post-service';
-import { useQueryClient } from '@tanstack/react-query';
+import type { PostStats } from '@/types/post';
+import { postService } from '@/services/post.service';
 import { toast } from 'sonner';
-import type { Post } from '@/types/post';
 
-export const usePostInteractionsHandlers = (post: Post, interactions?: PostInteractions) => {
-  const router = useRouter();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const { likePost, unlikePost, savePost, unsavePost } = usePostService();
+export interface UsePostInteractionsHandlers {
+  handleLikeClick: (e: React.MouseEvent) => Promise<void>;
+  handleSaveClick: (e: React.MouseEvent) => Promise<void>;
+  handleStarClick: (e: React.MouseEvent) => Promise<void>;
+  isLikeLoading: boolean;
+  isSaving: boolean;
+  isStarring: boolean;
+}
 
+export const usePostInteractionsHandlers = (
+  postId: string,
+  stats: PostStats,
+  invalidatePost: () => void
+): UsePostInteractionsHandlers => {
   const [isLikeLoading, setIsLikeLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isStarring, setIsStarring] = useState(false);
 
   const handleLikeClick = useCallback(async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
     try {
+      e.stopPropagation();
       setIsLikeLoading(true);
-      if (interactions?.hasLiked) {
-        await unlikePost(post.id);
-        toast.success('Đã bỏ thích bài viết');
-      } else {
-        await likePost(post.id);
-        toast.success('Đã thích bài viết');
-      }
-      queryClient.invalidateQueries(['post-interactions', post.id]);
+      await postService.toggleLike(postId);
+      invalidatePost();
     } catch (error) {
       toast.error('Không thể thực hiện thao tác này');
     } finally {
       setIsLikeLoading(false);
     }
-  }, [user, post.id, interactions?.hasLiked, likePost, unlikePost, queryClient]);
+  }, [postId, invalidatePost]);
 
   const handleSaveClick = useCallback(async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-
     try {
+      e.stopPropagation();
       setIsSaving(true);
-      if (interactions?.hasSaved) {
-        await unsavePost(post.id);
-        toast.success('Đã bỏ lưu bài viết');
-      } else {
-        await savePost(post.id);
-        toast.success('Đã lưu bài viết');
-      }
-      queryClient.invalidateQueries(['post-interactions', post.id]);
+      await postService.toggleSave(postId);
+      invalidatePost();
     } catch (error) {
-      toast.error('Không thể thực hiện thao tác này');
+      toast.error('Không thể lưu bài viết');
     } finally {
       setIsSaving(false);
     }
-  }, [user, post.id, interactions?.hasSaved, savePost, unsavePost, queryClient]);
+  }, [postId, invalidatePost]);
+
+  const handleStarClick = useCallback(async (e: React.MouseEvent) => {
+    try {
+      e.stopPropagation();
+      setIsStarring(true);
+      await postService.toggleStar(postId);
+      invalidatePost();
+    } catch (error) {
+      toast.error('Không thể đánh dấu bài viết');
+    } finally {
+      setIsStarring(false);
+    }
+  }, [postId, invalidatePost]);
 
   return {
+    handleLikeClick,
+    handleSaveClick,
+    handleStarClick,
     isLikeLoading,
     isSaving,
-    handleLikeClick,
-    handleSaveClick
+    isStarring
   };
 }; 

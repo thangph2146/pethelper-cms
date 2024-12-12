@@ -108,11 +108,13 @@ export interface PostsResponse {
 }
 
 export interface PostStats {
-  views: number;
   likes: number;
   comments: number;
-  shares: number;
+  saves: number;
+  hasLiked: boolean;
+  hasSaved: boolean;
 }
+
 export interface GetPostByIdParams {
   id: string;
 }
@@ -143,24 +145,30 @@ export const POST_URGENCY_LABELS: Record<PostUrgency | 'all', string> = {
 } as const;
 
 export interface PostCardProps {
-  post: {
-    id: string;
-    title: string;
-    content: string;
-    created_at: string;
-    author: {
-      id: string;
-      name: string;
-      avatar?: string;
-    };
-    isLiked: boolean;
-    likeCount: number;
-    commentCount: number;
-    status: PostStatus;
-    urgency: PostUrgency;
-    location?: string;
-    images?: string[];
-    contactInfo?: string;
+  post: Post;
+  className?: string;
+  disableInteractions?: boolean;
+  showPreview?: boolean;
+  showQuickActions?: boolean;
+  showMenu?: boolean;
+  onCardClick?: (post: Post) => void;
+}
+
+export interface PostCardHandlers {
+  handleCardClick: () => void;
+  handleDelete: () => Promise<void>;
+  handleLike: (e: React.MouseEvent) => Promise<void>;
+  handleSave: (e: React.MouseEvent) => Promise<void>;
+  handleStar: (e: React.MouseEvent) => Promise<void>;
+  handleShare: () => Promise<void>;
+}
+
+export interface PostCardView {
+  className: string;
+  header: {
+    statusColor: string;
+    urgencyColor: string;
+    date: string;
   };
 }
 
@@ -226,16 +234,72 @@ export interface PostRenderProps {
   };
   footer: {
     stats: PostStats;
+    isLiked: boolean;
+    isSaved: boolean;
+    hasInteractions: boolean;
     onLike: (e: React.MouseEvent) => Promise<void>;
     onComment: () => void;
     onSave: (e: React.MouseEvent) => Promise<void>;
-    isLikeLoading: boolean;
-    isSaving: boolean;
+    onShare: () => Promise<void>;
   };
   quickActions: {
     isStarred: boolean;
     onQuickView: (e: React.MouseEvent) => void;
     onStar: (e: React.MouseEvent) => Promise<void>;
-    isStarring: boolean;
+  };
+  loading: PostLoadingStates;
+  handlers: {
+    handleDelete: () => Promise<void>;
+    handleLike: (e: React.MouseEvent) => Promise<void>;
+    handleSave: (e: React.MouseEvent) => Promise<void>;
+    handleStar: (e: React.MouseEvent) => Promise<void>;
+    handleShare: () => Promise<void>;
+  };
+}
+
+import type { MotionProps } from 'framer-motion';
+
+export interface PostMotionProps extends MotionProps {
+  'data-testid'?: string;
+  role?: string;
+  'aria-label'?: string;
+  'aria-busy'?: boolean;
+  className?: string;
+}
+
+export interface PostHandlerParams {
+  postId: string;
+  renderProps: PostRenderProps;
+  handlers: PostCardHandlers;
+  setters: PostLoadingSetters;
+  disabled: boolean;
+  showQuickActions: boolean;
+  showMenu: boolean;
+  loadingStates: PostLoadingStates;
+}
+
+export interface PostLoadingSetters {
+  setIsDeleting: (loading: boolean) => void;
+  setIsLikeLoading: (loading: boolean) => void;
+  setIsSaving: (loading: boolean) => void;
+  setIsStarring: (loading: boolean) => void;
+  setIsSharing: (loading: boolean) => void;
+  setIsReporting: (loading: boolean) => void;
+}
+
+export interface PostErrorHandlingResult {
+  loadingStates: PostLoadingStates;
+  setters: PostLoadingSetters;
+  isAnyLoading: boolean;
+  disableInteractions: {
+    className: string;
+    'aria-disabled': boolean;
+  };
+  errorProps: {
+    onReset: () => void;
+    onError: (error: Error) => void;
+  };
+  loadingProps: {
+    isLoading: boolean;
   };
 }
