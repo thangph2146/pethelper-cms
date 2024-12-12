@@ -1,8 +1,6 @@
 import { connectToMongoDB } from '@/lib/mongodb';
 import { Post } from '@backend/models/Post';
-import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
-import { authOptions } from '@/lib/auth';
 
 export async function GET(req: Request) {
   try {
@@ -22,7 +20,6 @@ export async function GET(req: Request) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
         { content: { $regex: search, $options: 'i' } },
-        { location: { $regex: search, $options: 'i' } },
       ];
     }
 
@@ -33,12 +30,7 @@ export async function GET(req: Request) {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('author', 'name image')
-        .populate({
-          path: 'comments',
-          options: { sort: { createdAt: -1 }, limit: 3 },
-          populate: { path: 'author', select: 'name image' },
-        }),
+        .populate('author', 'name image'),
       Post.countDocuments(query),
     ]);
 
@@ -46,11 +38,10 @@ export async function GET(req: Request) {
     const hasNextPage = page < totalPages;
 
     return NextResponse.json({
-      data: {
-        posts,
-        hasNextPage,
-        totalPages,
-      },
+      posts,
+      hasNextPage,
+      currentPage: page,
+      totalPages
     });
   } catch (error) {
     console.error('Error in GET /api/posts:', error);
@@ -62,15 +53,18 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json(
-        { message: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+  const { getServerSession } = await import('next-auth');
+  const { authOptions } = await import('@/lib/auth');
+  
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json(
+      { message: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
 
+  try {
     const body = await req.json();
     const { title, content, images, status, location, animalType, contactInfo } = body;
 

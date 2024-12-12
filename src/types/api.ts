@@ -1,4 +1,3 @@
-import type { AxiosInstance } from 'axios';
 import type { IPost } from '@backend/models/Post';
 import type { IComment } from '@backend/models/Comment';
 
@@ -15,6 +14,7 @@ export interface ApiError {
 export interface PostsResponse {
   posts: IPost[];
   hasNextPage: boolean;
+  currentPage: number;
   totalPages: number;
 }
 

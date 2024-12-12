@@ -1,6 +1,6 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { PostService } from '@/services/post.service';
-import type { IPost } from '@backend/models/Post';
+import type { PostsResponse } from '@/types/api';
 
 interface UseInfinitePostsOptions {
   filters?: {
@@ -10,11 +10,7 @@ interface UseInfinitePostsOptions {
   };
 }
 
-interface PostsResponse {
-  posts: IPost[];
-  hasNextPage: boolean;
-  totalPages: number;
-}
+
 
 export function useInfinitePosts({ filters }: UseInfinitePostsOptions = {}) {
   return useInfiniteQuery<PostsResponse>({
@@ -25,7 +21,7 @@ export function useInfinitePosts({ filters }: UseInfinitePostsOptions = {}) {
     },  
     getNextPageParam: (lastPage) => {
       if (!lastPage.hasNextPage) return undefined;
-      return lastPage.totalPages + 1;
+      return lastPage.currentPage + 1;
     },
     initialPageParam: 1,
   });

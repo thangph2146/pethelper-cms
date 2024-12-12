@@ -1,33 +1,44 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
 
-export async function middleware(request: NextRequest) {
-  const token = await getToken({ req: request });
-  const isAdminRoute = request.nextUrl.pathname.startsWith('/admin');
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/auth');
-  const isApiRoute = request.nextUrl.pathname.startsWith('/api');
+// Danh sách các route không cần xác thực
+const publicRoutes = [
+  {
+    path: '/api/posts',
+    methods: ['GET']  // Chỉ cho phép GET request
+  },
+  {
+    path: '/api/auth/login',
+    methods: ['POST']  // Chỉ cho phép POST request
+  },
+  {
+    path: '/api/auth/register',
+    methods: ['POST']  // Chỉ cho phép POST request
+  },
+  {
+    path: '/api/auth/verify',
+    methods: ['POST']  // Chỉ cho phép POST request
+  }
+];
 
-  // Nếu đã đăng nhập và vào trang auth -> redirect về home
-  if (token && isAuthRoute) {
-    return NextResponse.redirect(new URL('/', request.url));
+export function middleware(request: NextRequest) {
+  // Kiểm tra nếu là public route và method phù hợp thì cho phép truy cập
+  const isPublicRoute = publicRoutes.some(route => {
+    const matchPath = request.nextUrl.pathname.startsWith(route.path);
+    const matchMethod = route.methods.includes(request.method);
+    return matchPath && matchMethod;
+  });
+
+  if (isPublicRoute) {
+    return NextResponse.next();
   }
 
-  // Nếu chưa đăng nhập và vào trang admin -> redirect về login
-  if (!token && isAdminRoute) {
-    return NextResponse.redirect(new URL('/auth/login', request.url));
-  }
-
-  // Nếu không phải admin mà vào trang admin -> redirect về home
-  if (token && isAdminRoute && token.role !== 'admin') {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-
-  // Nếu chưa đăng nhập và gọi API cần auth -> trả về lỗi
-  if (!token && isApiRoute && !request.nextUrl.pathname.startsWith('/api/auth')) {
-    return new NextResponse(
-      JSON.stringify({ message: 'Authentication required' }),
-      { status: 401, headers: { 'content-type': 'application/json' } }
+  // Kiểm tra token cho các route khác
+  const token = request.cookies.get('token');
+  if (!token) {
+    return NextResponse.json(
+      { message: 'Authentication required' },
+      { status: 401 }
     );
   }
 
@@ -35,5 +46,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/auth/:path*', '/api/:path*']
+  matcher: '/api/:path*',
 }; 

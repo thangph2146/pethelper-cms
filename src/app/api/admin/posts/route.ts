@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../../auth/[...nextauth]/route';
-import dbConnect from '@/lib/dbConnect';
+import { connectToMongoDB } from  '@/lib/mongodb';
 import { Post } from '@backend/models/Post';
-import { ApiError } from '@/lib/api';
+import { ApiError } from '@/lib/errors';  
 
 export async function GET(req: Request) {
   try {
@@ -12,7 +12,7 @@ export async function GET(req: Request) {
       throw new ApiError('Unauthorized', 401);
     }
 
-    await dbConnect();
+    await connectToMongoDB();
     const { searchParams } = new URL(req.url);
     
     const query: Record<string, any> = {};
@@ -52,8 +52,8 @@ export async function GET(req: Request) {
   } catch (error) {
     if (error instanceof ApiError) {
       return NextResponse.json(
-        { error: error.message },
-        { status: error.statusCode }
+        { error: (error as ApiError).message },
+        { status: (error as ApiError).statusCode }
       );
     }
     return NextResponse.json(
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
       throw new ApiError('Unauthorized', 401);
     }
 
-    await dbConnect();
+    await connectToMongoDB();
     const body = await req.json();
 
     const post = await Post.create({
@@ -89,8 +89,8 @@ export async function POST(req: Request) {
   } catch (error) {
     if (error instanceof ApiError) {
       return NextResponse.json(
-        { error: error.message },
-        { status: error.statusCode }
+        { error: (error as ApiError).message },
+        { status: (error as ApiError).statusCode }
       );
     }
     return NextResponse.json(
@@ -104,11 +104,11 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.role === 'admin') {
+    if (!(session?.user?.role === 'admin')) {
       throw new ApiError('Unauthorized', 401);
     }
 
-    await dbConnect();
+    await connectToMongoDB();
     const { ids } = await req.json();
 
     await Post.deleteMany({ _id: { $in: ids } });
@@ -119,8 +119,8 @@ export async function DELETE(req: Request) {
   } catch (error) {
     if (error instanceof ApiError) {
       return NextResponse.json(
-        { error: error.message },
-        { status: error.statusCode }
+        { error: (error as ApiError).message },
+        { status: (error as ApiError).statusCode }
       );
     }
     return NextResponse.json(
