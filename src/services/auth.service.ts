@@ -1,4 +1,5 @@
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { Database } from '@/types/supabase';
 import { LoginData, LoginResponse, RegisterData, ValidateSessionResponse } from '@/types/auth';
 import { validateLoginData, validateRegisterData } from '@/utils/validation';
 import axios from '@/utils/axios';
@@ -6,7 +7,10 @@ import { ValidationError } from '@/types/error';
 import { RegisterResponse } from '@/types/auth';
 
 export class AuthService {
-  private static supabase = createClientComponentClient();
+  private static supabase = createClientComponentClient<Database>({
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  });
 
   static async login(loginData: LoginData): Promise<LoginResponse> {
     try {
@@ -14,63 +18,78 @@ export class AuthService {
       validateLoginData.email(loginData.email);
       validateLoginData.password(loginData.password);
 
-      const { data } = await axios.post<LoginResponse>('/api/auth/login', loginData);
-
-      if (!data.success) {
-        throw new ValidationError(data.message);
-      }
-
-      // Lưu token và user info vào localStorage
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-
-      // Cập nhật token cho axios instance
-      axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-
-      // Tạo session sau khi login thành công
-      await this.createSession(data.token);
-
-      return data;
-    } catch (error: any) {
-      if (error.response) {
-        switch (error.response.status) {
-          case 401:
-            throw new ValidationError(error.response.data.message, 401, 'form');
-          case 403:
-            throw new ValidationError('Tài khoản bị khóa', 403, 'form');
-          case 429:
-            throw new ValidationError(error.response.data.message, 429, 'form');
-          default:
-            throw new ValidationError(error.response.data.message || 'Có lỗi xảy ra khi đăng nhập', 500, 'form');
-        }
-      }
-      throw error;
-    }
-  }
-
-  static async createSession(token: string): Promise<void> {
-    try {
-      const deviceInfo = this.getDeviceInfo();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // Token hết hạn sau 7 ngày
-
-      await axios.post('/api/auth/session', {
-        token,
-        deviceInfo,
-        expiresAt
+      // Đăng nhập với Supabase
+      const { data: authData, error: authError } = await this.supabase.auth.signInWithPassword({
+        email: loginData.email,
+        password: loginData.password,
       });
-    } catch (error) {
-      console.error('Create session error:', error);
+
+      if (authError) {
+        throw new ValidationError(authError.message, 'form');
+      }
+
+      if (!authData.user) {
+        throw new ValidationError('Có lỗi xảy ra khi đăng nhập', 'form');
+      }
+
+      // Lấy thông tin user từ bảng users
+      const { data: userData, error: userError } = await this.supabase
+        .from('users')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (userError || !userData) {
+        throw new ValidationError('Không tìm thấy thông tin người dùng', 'form');
+      }
+
+      // Kiểm tra trạng thái tài khoản
+      if (userData.status === 'blocked') {
+        throw new ValidationError('Tài khoản bị khóa', 'form');
+      }
+
+      if (userData.status === 'pending') {
+        throw new ValidationError('Vui lòng xác thực email trước khi đăng nhập', 'form');
+      }
+
+      const user = {
+        id: userData.id,
+        email: userData.email,
+        name: userData.name,
+        role: userData.role,
+        status: userData.status,
+      };
+
+      // Lưu session token và user info
+      localStorage.setItem('token', authData.session?.access_token || '');
+      localStorage.setItem('user', JSON.stringify(user));
+
+      return {
+        success: true,
+        message: 'Đăng nhập thành công',
+        user,
+        token: authData.session?.access_token || '',
+      };
+
+    } catch (error: any) {
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      throw new ValidationError(
+        error.message || 'Có lỗi xảy ra khi đăng nhập',
+        'form'
+      );
     }
   }
 
   static async validateSession(): Promise<boolean> {
     try {
-      const token = this.getToken();
-      if (!token) return false;
-
-      const { data } = await axios.get<ValidateSessionResponse>('/api/auth/session');
-      return data.status;
+      const { data: { session }, error } = await this.supabase.auth.getSession();
+      if (error || !session) {
+        this.logout();
+        return false;
+      }
+      return true;
     } catch (error) {
       this.logout();
       return false;
@@ -79,27 +98,32 @@ export class AuthService {
 
   static async logout(): Promise<void> {
     try {
-      const token = this.getToken();
-      if (token) {
-        await axios.delete('/api/auth/session');
-      }
+      await this.supabase.auth.signOut();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      delete axios.defaults.headers.common['Authorization'];
     }
   }
 
-  static getToken(): string | null {
-    return localStorage.getItem('token');
+  static async isAuthenticated(): Promise<boolean> {
+    const { data: { session } } = await this.supabase.auth.getSession();
+    return !!session;
   }
 
-  static getCurrentUser() {
-    const userStr = localStorage.getItem('user');
-    if (!userStr) return null;
-    return JSON.parse(userStr);
+  static async getCurrentUser() {
+    const { data: { user } } = await this.supabase.auth.getUser();
+    if (!user) return null;
+
+    // Lấy thêm thông tin từ bảng users
+    const { data: userData } = await this.supabase
+      .from('users')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    return userData;
   }
 
   static getDeviceInfo(): string {
@@ -118,78 +142,128 @@ export class AuthService {
         validateRegisterData.phone(registerData.phone);
       }
 
-      // Gọi API để đăng ký với Supabase
-      const { data } = await axios.post<RegisterResponse>('/api/auth/register', registerData);
-
-      if (!data.success) {
-        throw new ValidationError(data.message);
-      }
-    } catch (error: any) {
-      if (error.response) {
-        switch (error.response.status) {
-          case 409:
-            throw new ValidationError('Email đã được sử dụng', 'email');
-          default:
-            throw new ValidationError(
-              error.response.data.message || 'Có lỗi xảy ra khi đăng ký',
-              'form'
-            );
+      // Đăng ký user với Supabase Auth
+      const { data: authData, error: authError } = await this.supabase.auth.signUp({
+        email: registerData.email,
+        password: registerData.password,
+        options: {
+          data: {
+            name: registerData.name,
+            phone: registerData.phone || null,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`
         }
+      });
+
+      if (authError) {
+        if (authError.message.includes('User already registered')) {
+          throw new ValidationError('Email đã được sử dụng', 'email');
+        }
+        throw new ValidationError(authError.message, 'form');
       }
-      throw error;
+
+      if (!authData.user) {
+        throw new ValidationError('Có lỗi xảy ra khi đăng ký', 'form');
+      }
+
+      // Tạo profile trong bảng users
+      const { error: profileError } = await this.supabase
+        .from('users')
+        .insert([
+          {
+            id: authData.user.id,
+            email: registerData.email,
+            name: registerData.name,
+            phone: registerData.phone || null,
+            status: 'pending',
+            role: 'user'
+          }
+        ]);
+
+      if (profileError) {
+        throw new ValidationError('Có lỗi xảy ra khi tạo profile', 'form');
+      }
+
+    } catch (error: any) {
+      if (error instanceof ValidationError) {
+        throw error;
+      }
+      throw new ValidationError(
+        error.message || 'Có lỗi xảy ra khi đăng ký',
+        'form'
+      );
     }
   }
 
-  static isAuthenticated(): boolean {
-    const token = this.getToken();
-    return !!token;
-  }
-
-  static hasRole(role: string): boolean {
-    const user = this.getCurrentUser();
+  static async hasRole(role: string): Promise<boolean> {
+    const user = await this.getCurrentUser();
     return user?.role === role;
   }
 
-  static isActive(): boolean {
-    const user = this.getCurrentUser();
+  static async isActive(): Promise<boolean> {
+    const user = await this.getCurrentUser();
     return user?.status === 'active';
   }
 
   static async verifyEmail(token: string): Promise<void> {
     try {
-      const { data } = await axios.post<RegisterResponse>('/api/auth/verify', { token });
+      const { error } = await this.supabase.auth.verifyOtp({
+        token_hash: token,
+        type: 'email'
+      });
+
+      if (error) {
+        throw new ValidationError(error.message, 'form');
+      }
+
+      // Cập nhật trạng thái user trong bảng users
+      const { data: { user }, error: sessionError } = await this.supabase.auth.getUser();
       
-      if (!data.success) {
-        throw new ValidationError(data.message);
+      if (sessionError || !user) {
+        throw new ValidationError('Không tìm thấy thông tin người dùng', 'form');
       }
+
+      const { error: updateError } = await this.supabase
+        .from('users')
+        .update({ status: 'active' })
+        .eq('id', user.id);
+
+      if (updateError) {
+        throw new ValidationError('Có lỗi xảy ra khi cập nhật trạng thái', 'form');
+      }
+
     } catch (error: any) {
-      if (error.response) {
-        throw new ValidationError(
-          error.response.data.message || 'Có lỗi xảy ra khi xác thực email',
-          error.response.status,
-          'form'
-        );
+      if (error instanceof ValidationError) {
+        throw error;
       }
-      throw error;
+      throw new ValidationError(
+        error.message || 'Có lỗi xảy ra khi xác thực email',
+        'form'
+      );
     }
   }
 
   static async resendVerification(email: string): Promise<void> {
     try {
-      const { data } = await axios.post<RegisterResponse>('/api/auth/verify/resend', { email });
-      
-      if (!data.success) {
-        throw new ValidationError(data.message);
+      const { error } = await this.supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`
+        }
+      });
+
+      if (error) {
+        throw new ValidationError(error.message, 'form');
       }
     } catch (error: any) {
-      if (error.response) {
-        throw new ValidationError(
-          error.response.data.message || 'Có lỗi xảy ra khi gửi lại email xác thực',
-          error.response.status,
-          'form'
-        );
+      if (error instanceof ValidationError) {
+        throw error;
       }
-      throw error;
+      throw new ValidationError(
+        error.message || 'Có lỗi xảy ra khi gửi lại email xác thực',
+        'form'
+      );
     }
   }
 }

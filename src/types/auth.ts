@@ -16,18 +16,25 @@ export interface RegisterData {
 export interface LoginResponse {
   success: boolean;
   message: string;
-  user: SafeUser;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    status: string;
+  };
   token: string;
 }
 
 export interface RegisterResponse {
   success: boolean;
-  message: string;
+  message?: string;
   user?: {
     id: string;
     email: string;
     name: string;
-    phone?: string;
+    role: string;
+    status: string;
   };
 }
 
