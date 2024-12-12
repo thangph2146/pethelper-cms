@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AuthService } from '@/services/auth.service';
 import { UserServiceError } from '@/services/user.service';
+import { ValidationError } from '@/utils/validation';
 import type { RegisterData, AuthResponse } from '@/types/auth';
 
 export async function POST(request: Request) {
@@ -19,9 +20,14 @@ export async function POST(request: Request) {
 
     const response = await AuthService.registerServer(registerData);
 
-    return NextResponse.json(response);
-  } catch (error: any) {
-    if (error instanceof UserServiceError) {
+    return NextResponse.json<AuthResponse>({
+      success: true,
+      message: 'Đăng ký thành công',
+      user: response.user
+    });
+
+  } catch (error) {
+    if (error instanceof UserServiceError || error instanceof ValidationError) {
       return NextResponse.json(
         { 
           success: false, 

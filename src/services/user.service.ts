@@ -17,15 +17,18 @@ export const UserService = {
     try {
       await connectToMongoDB();
 
-      // Validate dữ liệu
+      // Validate dữ liệu bắt buộc
       if (!data.email || !data.password || !data.name) {
         throw new UserServiceError('Vui lòng điền đầy đủ thông tin');
       }
 
       // Validate các trường
-      validateRegisterData.password(data.password);
       validateRegisterData.name(data.name);
       validateRegisterData.email(data.email);
+      validateRegisterData.password(data.password);
+      if (data.phone) {
+        validateRegisterData.phone(data.phone); // Chỉ validate phone khi có giá trị
+      }
 
       // Kiểm tra email đã tồn tại
       const existingUser = await User.findOne({ email: data.email });

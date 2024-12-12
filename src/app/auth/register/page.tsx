@@ -191,7 +191,7 @@ export default function RegisterPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded"
             >
               {loading ? 'Đang xử lý...' : 'Đăng ký'}
             </Button>

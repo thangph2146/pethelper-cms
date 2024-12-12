@@ -24,5 +24,14 @@ export const validateRegisterData = {
     if (!emailRegex.test(email)) {
       throw new ValidationError('Email không hợp lệ');
     }
+  },
+
+  phone: (phone?: string) => {
+    if (!phone) return;
+    
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(phone)) {
+      throw new ValidationError('Số điện thoại không hợp lệ');
+    }
   }
 }; 
