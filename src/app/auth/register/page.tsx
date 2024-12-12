@@ -199,8 +199,8 @@ export default function RegisterPage() {
               type="submit"
               className="w-full"
               disabled={loading}
+              loading={loading}
             >
-              {loading ? <Spinner className="mr-2" /> : null}
               {loading ? 'Đang đăng ký...' : 'Đăng ký'}
             </Button>
           </form>

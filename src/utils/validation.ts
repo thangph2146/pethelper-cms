@@ -30,14 +30,14 @@ export const validateRegisterData = {
       throw new ValidationError('Mật khẩu phải có ít nhất 6 ký tự', 400, 'password');
     }
     // Thêm các quy tắc khác nếu cần
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$/;
-    if (!passwordRegex.test(password)) {
-      throw new ValidationError(
-        'Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 số',
-        400,
-        'password'
-      );
-    }
+    // const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/;
+    // if (!passwordRegex.test(password)) {
+    //   throw new ValidationError(
+    //     'Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường và 1 số',
+    //     400,
+    //     'password'
+    //   );
+    // }
   },
 
   phone: (phone: string) => {
