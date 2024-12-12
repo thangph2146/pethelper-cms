@@ -1,3 +1,4 @@
+import { getSession } from '@/lib/auth';
 import { connectToMongoDB } from '@/lib/mongodb';
 import { Post } from '@backend/models/Post';
 import { NextResponse } from 'next/server';
@@ -53,10 +54,8 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const { getServerSession } = await import('next-auth');
-  const { authOptions } = await import('@/lib/auth');
+  const session = await getSession();
   
-  const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json(
       { message: 'Unauthorized' },
@@ -80,7 +79,7 @@ export async function POST(req: Request) {
       title,
       content,
       images: images || [],
-      author: session.user.id,
+      author: session.user,
       status,
       location,
       animalType,
