@@ -1,42 +1,86 @@
 'use client';
 
-import { useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useInfinitePosts } from '@/hooks/use-infinite-posts';
 import { PostCard } from '@/components/PostCard';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import type { IPost, PostFilters } from '@/types/post';
+import { 
+  POST_TYPE_LABELS, 
+  POST_STATUS_LABELS, 
+  POST_URGENCY_LABELS,
+  PostType,
+  PostStatus,
+  PostUrgency 
+} from '@/types/post';
 
-const TYPE_OPTIONS = [
-  { value: 'all', label: 'Tất cả' },
-  { value: 'dog', label: 'Chó' },
-  { value: 'cat', label: 'Mèo' },
-  { value: 'other', label: 'Khác' }
-];
+// Chuyển các options thành array từ constants
+const TYPE_OPTIONS = Object.entries(POST_TYPE_LABELS).map(([value, label]) => ({
+  value,
+  label
+}));
 
-const STATUS_OPTIONS = [
-  { value: 'all', label: 'Tất cả trạng thái' },
-  { value: 'cần_giúp_đỡ', label: 'Cần giúp đỡ' },
-  { value: 'đang_hỗ_trợ', label: 'Đang hỗ trợ' },
-  { value: 'đã_giải_quyết', label: 'Đã giải quyết' }
-];
+const STATUS_OPTIONS = Object.entries(POST_STATUS_LABELS).map(([value, label]) => ({
+  value,
+  label
+}));
 
-const URGENCY_OPTIONS = [
-  { value: 'all', label: 'Tất cả mức độ' },
-  { value: 'cao', label: 'Khẩn cấp' },
-  { value: 'trung_bình', label: 'Trung bình' },
-  { value: 'thấp', label: 'Thấp' }
-];
+const URGENCY_OPTIONS = Object.entries(POST_URGENCY_LABELS).map(([value, label]) => ({
+  value,
+  label
+}));
 
 export default function SearchPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const [filters, setFilters] = useState<PostFilters>({
-    keyword: searchParams.get('q') || '',
-    type: (searchParams.get('type') as PostFilters['type']) || undefined,
-    status: (searchParams.get('status') as PostFilters['status']) || undefined,
-    urgency: (searchParams.get('urgency') as PostFilters['urgency']) || undefined,
-    limit: 12,
-  });
+  
+  const getInitialFilters = useCallback(() => {
+    const type = searchParams.get('type');
+    const status = searchParams.get('status');
+    const urgency = searchParams.get('urgency');
+    
+    return {
+      keyword: searchParams.get('q') || '',
+      type: type && type !== 'all' ? type as PostType : undefined,
+      status: status && status !== 'all' ? status as PostStatus : undefined,
+      urgency: urgency && urgency !== 'all' ? urgency as PostUrgency : undefined,
+      limit: 12,
+    };
+  }, [searchParams]);
+
+  const [filters, setFilters] = useState<PostFilters>(getInitialFilters());
+
+  // Cập nhật URL khi filters thay đổi
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filters.keyword) params.set('q', filters.keyword);
+    if (filters.type) params.set('type', filters.type);
+    if (filters.status) params.set('status', filters.status);
+    if (filters.urgency) params.set('urgency', filters.urgency);
+    
+    const newUrl = `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}`;
+    router.replace(newUrl);
+  }, [filters, router]);
+
+  // Reset filters
+  const handleReset = () => {
+    setFilters({
+      keyword: '',
+      limit: 12
+    });
+  };
+
+  // Xử lý thay đổi filter
+  const handleFilterChange = <T extends keyof PostFilters>(
+    key: T,
+    value: string
+  ) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value === 'all' ? undefined : value as PostFilters[T]
+    }));
+  };
 
   const {
     data,
@@ -44,18 +88,35 @@ export default function SearchPage() {
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
-  } = useInfinitePosts(filters as PostFilters);
+  } = useInfinitePosts({ filters, limit: filters.limit || 12 });
 
-  const allPosts = data?.pages.flatMap(page => page.data as IPost[]) || [];
+  const allPosts = data?.pages.flatMap(page => page.data) || [];
 
+  // Thêm function xử lý search form
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const keyword = formData.get('keyword') as string;
+    
     setFilters(prev => ({
       ...prev,
-      keyword: formData.get('keyword') as string,
+      keyword: keyword.trim()
     }));
   };
+
+  // Thêm loading state cho infinite scroll
+  const isLoadingMore = isLoading || isFetchingNextPage;
+
+  // Thêm hàm chuyển đổi dữ liệu
+  const transformPostForCard = (post: IPost) => ({
+    id: post._id,
+    title: post.title,
+    content: post.content,
+    user_id: post.author._id,
+    status: post.status,
+    created_at: post.createdAt,
+    updated_at: post.updatedAt
+  });
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -71,9 +132,10 @@ export default function SearchPage() {
           />
           <button
             type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            disabled={isLoadingMore}
           >
-            Tìm kiếm
+            {isLoadingMore ? 'Đang tìm...' : 'Tìm kiếm'}
           </button>
         </form>
 
@@ -81,10 +143,7 @@ export default function SearchPage() {
         <div className="flex flex-wrap gap-4">
           <select
             value={filters.type || 'all'}
-            onChange={(e) => setFilters(prev => ({
-              ...prev,
-              type: e.target.value === 'all' ? undefined : e.target.value as SearchPostParams['type']
-            }))}
+            onChange={(e) => handleFilterChange('type', e.target.value)}
             className="p-2 border rounded-lg dark:bg-gray-800"
           >
             {TYPE_OPTIONS.map(option => (
@@ -96,10 +155,7 @@ export default function SearchPage() {
 
           <select
             value={filters.status || 'all'}
-            onChange={(e) => setFilters(prev => ({
-              ...prev,
-              status: e.target.value === 'all' ? undefined : e.target.value as SearchPostParams['status']
-            }))}
+            onChange={(e) => handleFilterChange('status', e.target.value)}
             className="p-2 border rounded-lg dark:bg-gray-800"
           >
             {STATUS_OPTIONS.map(option => (
@@ -111,10 +167,7 @@ export default function SearchPage() {
 
           <select
             value={filters.urgency || 'all'}
-            onChange={(e) => setFilters(prev => ({
-              ...prev,
-              urgency: e.target.value === 'all' ? undefined : e.target.value as SearchPostParams['urgency']
-            }))}
+            onChange={(e) => handleFilterChange('urgency', e.target.value)}
             className="p-2 border rounded-lg dark:bg-gray-800"
           >
             {URGENCY_OPTIONS.map(option => (
@@ -124,6 +177,15 @@ export default function SearchPage() {
             ))}
           </select>
         </div>
+
+        {/* Reset Filters Button */}
+        <button
+          onClick={handleReset}
+          disabled={isLoadingMore}
+          className="mt-4 px-4 py-2 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50"
+        >
+          Đặt lại bộ lọc
+        </button>
       </div>
 
       {/* Results */}
@@ -131,13 +193,20 @@ export default function SearchPage() {
         <LoadingSpinner />
       ) : allPosts.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">Không tìm thấy bài đăng nào</p>
+          <p className="text-gray-500">
+            {filters.keyword 
+              ? `Không tìm thấy kết quả cho "${filters.keyword}"`
+              : 'Không tìm thấy bài đăng nào'}
+          </p>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {allPosts.map((post) => (
-              <PostCard key={post._id.toString()} post={post} />
+              <PostCard 
+                key={post._id.toString()} 
+                post={transformPostForCard(post)}
+              />
             ))}
           </div>
 
@@ -146,7 +215,7 @@ export default function SearchPage() {
             <div className="mt-8 text-center">
               <button
                 onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
+                disabled={isLoadingMore}
                 className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
                 {isFetchingNextPage ? 'Đang tải...' : 'Xem thêm'}
