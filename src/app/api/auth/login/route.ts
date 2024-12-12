@@ -5,12 +5,27 @@ import { ValidationError } from '@/types/error';
 import { errorHandler } from '@/middleware/error-handler';
 import { tokenUtils } from '@/utils/token';
 import type { LoginData } from '@/types/auth';
+import { PrismaClientInitializationError } from '@prisma/client/runtime/library';
 
 const MAX_LOGIN_ATTEMPTS = 5;
 const LOCK_TIME = 15 * 60 * 1000; // 15 phút
 
 export async function POST(request: Request) {
   try {
+    // Kiểm tra kết nối database
+    try {
+      await prisma.$connect();
+    } catch (error) {
+      if (error instanceof PrismaClientInitializationError) {
+        console.error('Lỗi kết nối database:', error);
+        return NextResponse.json({
+          success: false,
+          message: 'Không thể kết nối đến cơ sở dữ liệu. Vui lòng thử lại sau.',
+        }, { status: 503 });
+      }
+      throw error;
+    }
+
     const body = await request.json();
     
     const loginData: LoginData = {
@@ -112,5 +127,8 @@ export async function POST(request: Request) {
 
   } catch (error) {
     return errorHandler(error);
+  } finally {
+    // Đảm bảo ngắt kết nối database sau khi hoàn thành
+    await prisma.$disconnect();
   }
 } 
