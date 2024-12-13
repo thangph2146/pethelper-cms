@@ -75,15 +75,24 @@ export const POST_QUERY_KEYS = {
 } as const;
 
 export const POST_MESSAGES = {
+  aria: {
+    post: (author: string) => `Bài viết của ${author}`,
+    loading: 'Đang tải nội dung bài viết',
+    error: 'Đã xảy ra lỗi khi tải bài viết',
+    retry: 'Thử lại'
+  },
   errors: {
+    interaction: 'Có lỗi xảy ra khi thực hiện thao tác',
     delete: 'Không thể xóa bài viết',
     load: 'Có lỗi xảy ra khi hiển thị bài viết',
     retry: 'Thử lại',
     like: 'Không thể thực hiện thao tác này',
     save: 'Không thể lưu bài viết',
-    star: 'Không thể đánh dấu bài viết'
+    star: 'Không thể đánh dấu bài viết',
+    share: 'Không thể chia sẻ bài viết'
   },
   success: {
+    share: 'Đã chia sẻ bài viết',
     delete: 'Đã xóa bài viết',
     like: 'Đã thích bài viết',
     unlike: 'Đã bỏ thích bài viết',

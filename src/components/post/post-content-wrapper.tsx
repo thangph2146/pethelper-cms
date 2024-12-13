@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { areEqual } from 'react-window';
 import { PostLoadingOverlay } from './post-loading-overlay';
 import { PostCardContent } from './post-card-content';
 import { PostPreviewWrapper } from './post-preview-wrapper';
@@ -10,7 +11,7 @@ import type {
   PostRenderProps 
 } from '@/types/post';
 
-interface PostContentWrapperProps {
+interface PostContentProps {
   loading: PostLoadingStates;
   cardProps: {
     className: string;
@@ -23,8 +24,7 @@ interface PostContentWrapperProps {
   post: Post;
   view: PostCardView;
   dialogs: PostDialogProps['dialogs'];
-  onDelete: () => Promise<void>;
-  onShare: () => Promise<void>;
+  'data-testid'?: string;
 }
 
 export const PostContentWrapper = memo(({
@@ -35,30 +35,25 @@ export const PostContentWrapper = memo(({
   post,
   view,
   dialogs,
-  onDelete,
-  onShare
-}: PostContentWrapperProps) => {
+  'data-testid': testId
+}: PostContentProps) => {
   return (
-    <>
+    <div data-testid={testId}>
       <PostLoadingOverlay loading={loading} />
-
       <PostCardContent
         cardProps={cardProps}
         renderProps={renderProps}
       />
-
       {showPreview && (
         <PostPreviewWrapper
           post={post}
           view={view}
           dialogs={dialogs}
           loading={loading}
-          onDelete={onDelete}
-          onShare={onShare}
         />
       )}
-    </>
+    </div>
   );
-});
+}, areEqual);
 
 PostContentWrapper.displayName = 'PostContentWrapper'; 

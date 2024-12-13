@@ -1,3 +1,6 @@
+import { RefObject } from 'react';
+import type { LoadingState, LoadingProps } from './loading';
+
 export interface IPost {
   _id: string;
   id: string;
@@ -41,6 +44,14 @@ export interface IPost {
   $assertPopulated?: <T>() => T;
   $clearModifiedPaths?: () => void;
   $clone?: () => IPost;
+}
+
+export interface IPostStats {
+  likes: number;
+  comments: number;
+  saves: number;
+  hasLiked: boolean;
+  hasSaved: boolean;
 }
 
 export interface CreatePostData {
@@ -114,9 +125,32 @@ export interface PostStats {
   hasLiked: boolean;
   hasSaved: boolean;
 }
+export interface PostCardRenderProps {
+  className: string;
+  onClick: () => void;
+  'data-testid': string;
+  'aria-disabled': boolean;
+}
 
 export interface GetPostByIdParams {
   id: string;
+}
+export interface UsePostPreviewDialog {
+  preview: () => void;
+  view: () => void;
+}
+export interface UsePostDialogs {
+  dialogs: () => void;
+}
+export interface PostDialogProps {
+  post: Post;
+  preview: UsePostPreviewDialog['preview'];
+  dialogs: UsePostDialogs;
+  view: UsePostPreviewDialog['view'];
+  loading: {
+    isDeleting: boolean;
+  };
+  onDelete: () => Promise<void>;
 }
 
 export interface GetPostByIdResponse {
@@ -144,6 +178,32 @@ export const POST_URGENCY_LABELS: Record<PostUrgency | 'all', string> = {
   low: 'Thấp'
 } as const;
 
+export interface PostPropTypes {
+  post: {
+    id: string;
+    author: {
+      id: string;
+      name: string;
+      avatar?: string;
+    };
+    title: string;
+    content: string;
+    created_at: string;
+    status: PostStatus;
+    urgency: PostUrgency;
+    location?: string;
+    contactInfo?: string;
+    images?: string[];
+    viewCount?: number;
+  };
+  className?: string;
+  disableInteractions?: boolean;
+  showPreview?: boolean;
+  showQuickActions?: boolean;
+  showMenu?: boolean;
+  onCardClick?: (post: Post) => void;
+}
+
 export interface PostCardProps {
   post: Post;
   className?: string;
@@ -170,6 +230,14 @@ export interface PostCardView {
     urgencyColor: string;
     date: string;
   };
+}
+
+export interface PostLoadingStates {
+  isDeleting: boolean;
+  isLikeLoading: boolean;
+  isSaving: boolean;
+  isStarring: boolean;
+  isSharing: boolean;
 }
 
 export interface ReportDialogProps {
@@ -243,6 +311,7 @@ export interface PostRenderProps {
     onShare: () => Promise<void>;
   };
   quickActions: {
+    isStarring: boolean;  
     isStarred: boolean;
     onQuickView: (e: React.MouseEvent) => void;
     onStar: (e: React.MouseEvent) => Promise<void>;
@@ -259,12 +328,18 @@ export interface PostRenderProps {
 
 import type { MotionProps } from 'framer-motion';
 
+export interface PostAnimationState {
+  motionProps: PostMotionProps;
+}
+
 export interface PostMotionProps extends MotionProps {
   'data-testid'?: string;
   role?: string;
   'aria-label'?: string;
   'aria-busy'?: boolean;
+  'aria-disabled'?: boolean;
   className?: string;
+  whileHover?: MotionProps['whileHover'];
 }
 
 export interface PostHandlerParams {
@@ -291,8 +366,10 @@ export interface PostErrorHandlingResult {
   loadingStates: PostLoadingStates;
   setters: PostLoadingSetters;
   isAnyLoading: boolean;
+  isError: boolean;
   disableInteractions: {
     className: string;
+    ariaDisabled: boolean;
     'aria-disabled': boolean;
   };
   errorProps: {
@@ -302,4 +379,102 @@ export interface PostErrorHandlingResult {
   loadingProps: {
     isLoading: boolean;
   };
+}
+
+export interface PostHandlers {
+  handleDelete: () => Promise<void>;
+  handleLike: (e: React.MouseEvent) => Promise<void>;
+  handleSave: (e: React.MouseEvent) => Promise<void>;
+  handleStar: (e: React.MouseEvent) => Promise<void>;
+  handleShare: () => Promise<void>;
+}
+
+export interface PostErrorProps {
+  onReset: () => void;
+  onError: (error: Error) => void;
+}
+
+export interface PostCardState {
+  view: PostCardView;
+  loading: PostLoadingState;
+  handlers: PostHandlers;
+  renderProps: PostRenderProps;
+  dialogs: PostDialogProps;
+  motionProps: PostMotionProps;
+}
+
+export interface PostErrorState {
+  loadingStates: PostLoadingStates;
+  setters: PostLoadingSetters;
+  isAnyLoading: boolean;
+  disableInteractions: {
+    'aria-disabled': boolean;
+  };
+  errorProps: PostErrorProps;
+  loadingProps: PostLoadingProps;
+  isError: boolean;
+}
+
+export interface PostTrackingState {
+  trackInteraction: (action: string) => void;
+  trackError: (error: Error) => void;
+}
+
+export interface PostHandlerState {
+  handlers: PostHandlers;
+  renderProps: PostRenderProps;
+}
+
+export interface PostPropState {
+  cardProps: PostCardProps;
+  contentProps: PostContentProps;
+  motionContainerProps: PostMotionProps;
+  wrapperProps: PostWrapperProps;
+}
+
+export interface PostLoadingState extends LoadingState {}
+export interface PostLoadingProps extends LoadingProps {}
+
+export interface ErrorContainerProps {
+  errorProps: {
+    onReset: () => void;
+    onError: (error: Error) => void;
+  };
+  'data-testid'?: string;
+  children: React.ReactNode;
+}
+
+export interface MotionContainerProps {
+  motionProps: PostMotionProps;
+  children: React.ReactNode;
+}
+
+export interface PostContainerProps {
+  errorProps: ErrorContainerProps['errorProps'];
+  loadingProps: LoadingProps;
+  motionProps: PostMotionProps;
+  contentProps: PostContentProps;
+  children?: React.ReactNode;
+}
+
+export interface PostContentProps {
+  cardProps: {
+    className: string;
+    onClick: () => void;
+    'data-testid': string;
+    'aria-disabled': boolean;
+  };
+  renderProps: PostRenderProps;
+}
+
+export interface PostWrapperProps {
+  wrapperProps: Record<string, unknown>;
+  errorProps: {
+    onReset: () => void;
+    onError: (error: Error) => void;
+  };
+  loadingProps: LoadingProps;
+  motionProps: PostMotionProps;
+  contentProps: PostContentProps;
+  'data-testid'?: string;
 }

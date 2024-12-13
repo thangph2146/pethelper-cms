@@ -29,7 +29,7 @@ export const usePostCardProps = ({
     className: cn(view.className, disableInteractions.className),
     onClick: handlers.handleCardClick,
     'data-testid': 'post-card',
-    ...disableInteractions
+    'aria-disabled': disableInteractions['aria-disabled']
   }), [view.className, disableInteractions, handlers.handleCardClick]);
 
   const motionDivProps = useMemo(() => ({

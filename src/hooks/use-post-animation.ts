@@ -1,25 +1,26 @@
-import { useState, useCallback } from 'react';
-import type { MotionProps } from 'framer-motion';
+import { useMemo } from 'react';
+import type { PostMotionProps } from '@/types/post';
+import { POST_ANIMATION } from '@/constants/post-animation';
+import { POST_CONFIG } from '@/constants/post-config';
 
-export interface UsePostAnimation {
-  isHovered: boolean;
-  motionProps: MotionProps;
+interface UsePostAnimationParams {
+  motionProps: PostMotionProps;
+  isDisabled?: boolean;
 }
 
-export const usePostAnimation = (): UsePostAnimation => {
-  const [isHovered, setIsHovered] = useState(false);
-
-  const motionProps: MotionProps = {
-    initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -20 },
-    transition: { duration: 0.2 },
-    onHoverStart: useCallback(() => setIsHovered(true), []),
-    onHoverEnd: useCallback(() => setIsHovered(false), [])
-  };
-
-  return {
-    isHovered,
-    motionProps
-  };
+export const usePostAnimation = ({
+  motionProps,
+  isDisabled = false
+}: UsePostAnimationParams) => {
+  return useMemo(() => ({
+    motionProps: {
+      ...motionProps,
+      'data-testid': POST_CONFIG.testIds.motion,
+      animate: POST_ANIMATION.animate,
+      initial: POST_ANIMATION.initial,
+      exit: POST_ANIMATION.exit,
+      transition: POST_ANIMATION.transition,
+      whileHover: isDisabled ? undefined : POST_ANIMATION.hover
+    }
+  }), [motionProps, isDisabled]);
 }; 

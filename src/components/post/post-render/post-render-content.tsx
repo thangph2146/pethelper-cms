@@ -3,21 +3,26 @@ import type { PostRenderProps } from '@/types/post';
 import { PostContent } from '../post-content';
 import { PostImages } from '../post-images';
 
-type PostRenderContentProps = PostRenderProps['content'];
+interface PostRenderContentProps {
+  content: PostRenderProps['content'];
+}
 
-export const PostRenderContent = memo((props: PostRenderContentProps) => {
-  const { images, onImageClick, ...contentProps } = props;
-
+export const PostRenderContent = memo(({ content }: PostRenderContentProps) => {
   return (
-    <div className="space-y-4">
-      <PostContent {...contentProps} />
-      {images && images.length > 0 && (
+    <>
+      <PostContent
+        {...content}
+        showContent={content.showContent}
+        toggleContent={content.toggleContent}
+        contentRef={content.contentRef}
+      />
+      {content.images && content.images.length > 0 && (
         <PostImages
-          images={images}
-          onImageClick={onImageClick}
+          images={content.images}
+          onImageClick={content.onImageClick}
         />
       )}
-    </div>
+    </>
   );
 });
 

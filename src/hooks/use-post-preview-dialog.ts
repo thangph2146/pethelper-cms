@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import type { Post } from '@/types/post';
+import { usePostPreview } from './use-post-preview';
 
 export interface UsePostPreviewDialog {
   preview: {

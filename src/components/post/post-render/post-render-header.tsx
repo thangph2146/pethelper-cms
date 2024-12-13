@@ -1,26 +1,19 @@
 import { memo } from 'react';
+import type { PostRenderProps } from '@/types/post';
 import { PostHeader } from '../post-header';
 import { PostMenu } from '../post-menu';
-import type { PostRenderProps } from '@/types/post';
 
-type PostRenderHeaderProps = PostRenderProps['header'];
+interface PostRenderHeaderProps {
+  header: PostRenderProps['header'];
+}
 
-export const PostRenderHeader = memo((props: PostRenderHeaderProps) => {
-  const { isAuthor, onMenuAction, ...headerProps } = props;
-
+export const PostRenderHeader = memo(({ header }: PostRenderHeaderProps) => {
   return (
-    <div 
-      className="flex items-center justify-between"
-      data-testid="post-render-header"
-    >
-      <PostHeader 
-        {...headerProps} 
-        data-testid="post-header"
-      />
+    <div className="flex items-center justify-between">
+      <PostHeader {...header} />
       <PostMenu 
-        isAuthor={isAuthor}
-        onAction={onMenuAction}
-        data-testid="post-menu"
+        isAuthor={header.isAuthor}
+        onAction={header.onMenuAction}
       />
     </div>
   );

@@ -1,8 +1,8 @@
 import { memo } from 'react';
-import type { PostStats } from '@/hooks/use-post-stats';
+import type { IPostStats } from '@/types/post';
 
 interface PostStatsProps {
-  stats: PostStats;
+  stats: IPostStats;
   isLoading?: boolean;
 }
 
@@ -19,9 +19,9 @@ export const PostStats = memo(({ stats, isLoading }: PostStatsProps) => {
 
   return (
     <div className="flex items-center gap-4 text-sm text-muted-foreground">
-      <span>{stats.likeCount} lượt thích</span>
-      <span>{stats.commentCount} bình luận</span>
-      <span>{stats.saveCount} lượt lưu</span>
+      <span>{stats.likes} lượt thích</span>
+      <span>{stats.comments} bình luận</span>
+      <span>{stats.saves} lượt lưu</span>
     </div>
   );
 }); 

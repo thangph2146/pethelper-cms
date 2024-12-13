@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
-import type { PostHandlers } from '@/types/post';
+import type { PostCardHandlers } from '@/types/post';
 
 interface UsePostEnhancedHandlersProps {
-  handlers: PostHandlers;
+  handlers: PostCardHandlers;
   setters: {
     setIsDeleting: (loading: boolean) => void;
     setIsLikeLoading: (loading: boolean) => void;

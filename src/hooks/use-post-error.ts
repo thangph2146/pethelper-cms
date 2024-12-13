@@ -14,11 +14,13 @@ export const usePostError = (postId: string): UsePostError => {
 
   const handleError = useCallback((error: Error) => {
     console.error('Post error:', error);
-    toast.error(POST_MESSAGES.errors.load);
+    toast.error(POST_MESSAGES.errors.loading.post);
   }, []);
 
   const resetError = useCallback(() => {
-    queryClient.invalidateQueries(POST_QUERY_KEYS.interactions(postId));
+    queryClient.invalidateQueries({
+      queryKey: POST_QUERY_KEYS.interactions(postId)
+    });
     toast.success(POST_MESSAGES.success.retry);
   }, [queryClient, postId]);
 
